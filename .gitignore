@@ -40,3 +40,4 @@ __pycache__/
 core
 core.*
 !src/core.rs
+push_all.sh
