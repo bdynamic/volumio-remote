@@ -28,6 +28,15 @@ Status: all open.
 | F-18 | C | Album art | absent in original |
 | F-19 | C | Visible error message on failed request | absent in original |
 | F-20 | C | Validate host input | absent in original |
+| F-21 | M | Modern UI, same functions as F-01..F-16 | new (original: dated Qt Widgets look) |
+| F-22 | M | UI follows system light/dark theme | new |
+| F-23 | M | Register as media player on OS (Linux: MPRIS2 over D-Bus, name `org.mpris.MediaPlayer2.volumiox`) | new |
+| F-24 | M | MPRIS methods `Play`, `Pause`, `PlayPause`, `Stop`, `Next`, `Previous` -> Volumio commands | new |
+| F-25 | M | MPRIS properties `PlaybackStatus`, `Metadata` (title, artist, album) kept in sync with Volumio state | new |
+| F-26 | M | Keyboard media keys (play/pause/next/prev) control Volumio via F-23/24 | new; desktop routes keys to MPRIS player |
+| F-27 | S | MPRIS `Volume` property get/set <-> Volumio volume (works with `playerctl volume`) | new |
+| F-28 | S | Keyboard volume knob/keys control Volumio volume (see Feasibility) | new |
+| F-29 | C | Album art in MPRIS `mpris:artUrl` | new |
 
 ## Non-functional
 
@@ -40,6 +49,8 @@ Status: all open.
 | N-05 | S | Command latency < 1 s on LAN |
 | N-06 | S | UI never blocks on network (async or short timeout) |
 | N-07 | C | Cross-platform (Windows/macOS) |
+| N-08 | M | OS media integration must not need root |
+| N-09 | S | Works on GNOME, KDE; X11 and Wayland |
 
 ## Interface (Volumio REST, base `http://<host>`)
 
@@ -53,6 +64,24 @@ Status: all open.
 | `/api/v1/commands/?cmd=volume&volume=<n>` | set volume | F-07 |
 | `/api/v1/commands/?cmd=volume&volume=mute\|unmute` | mute (unverified) | F-15 |
 
+## Feasibility: media keys and volume knob
+
+| Input | Routed by desktop to | Reaches app? | Approach |
+|---|---|---|---|
+| Play/Pause/Next/Prev keys | active MPRIS player (D-Bus) | Yes, if F-23 done | Register MPRIS2 service |
+| Volume knob/keys | default audio sink (PipeWire/PulseAudio), not MPRIS | No, by default | See options below |
+
+Options for F-28 (decide later):
+
+| Opt | Idea | Pro | Con |
+|---|---|---|---|
+| A | Create virtual null sink "Volumio"; user selects it as default; app watches sink volume (`pactl subscribe` / `pw` API) and forwards to Volumio | Works on X11+Wayland, no root | User must pick sink as default; local audio then silent (fine: Volumio plays remotely) |
+| B | Global key grab of `XF86AudioRaiseVolume/LowerVolume/Mute` | Simple | X11 only; Wayland blocks; conflicts with desktop handler |
+| C | Desktop custom shortcut calling CLI `volumiox --vol-up` | Works everywhere | Manual user setup; overrides default volume keys |
+| D | Skip; use `playerctl volume` / app slider only | Zero effort | No knob support |
+
+Recommendation: A, fallback C. Verify on target desktop first (spike).
+
 ## Out of scope (original)
 
 Library browsing, queue/playlist editing, source selection, multi-device, auth.
@@ -60,4 +89,5 @@ Library browsing, queue/playlist editing, source selection, multi-device, auth.
 ## Notes
 
 - Original runs two timers: 500 ms (state/ping) and 50 ms (UI helpers). 50 ms timer not needed in a rewrite.
+- Added requirements F-21..F-29, N-08/09 on user request (modern UI, OS media device, volume knob).
 - Original has no license -> reimplement, do not copy code.
