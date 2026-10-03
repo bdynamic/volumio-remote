@@ -56,6 +56,9 @@ Priority: M = must, S = should, C = could. Status values: **done** = implemented
 | F-46 | M | `install.sh`: pull, build, install, autostart, restart, remove legacy `volumiox` files | done |
 | F-47 | M | Version 1.1.0 (from `Cargo.toml`) shown in settings dialog | done |
 | F-48 | M | GPL-3.0-or-later license (`LICENSE`) | done |
+| F-49 | S | Cover art corners rounded (16 px, same as the card) | done |
+| F-50 | S | Title, artist, album scroll horizontally (pause, scroll, pause) when wider than the window; centered otherwise | done |
+| F-51 | S | Settings footer: copyright "Birk Bremer" and clickable GitHub link (`xdg-open`) | done |
 
 ## Non-functional
 

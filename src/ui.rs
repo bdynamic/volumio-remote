@@ -58,6 +58,27 @@ slint::slint! {
             "M 2 7 H 6 L 11 3 V 17 L 6 13 H 2 Z M 14 7 Q 17 10 14 13";
     }
 
+    component Marquee inherits Rectangle {
+        in property <string> text;
+        in property <color> fill;
+        in property <length> font-size;
+        in property <int> font-weight: 400;
+        property <length> overflow: max(0px, t.preferred-width - self.width);
+        // seconds: 1.5 pause, scroll at 40px/s, 1.5 pause
+        property <float> cycle: 3.0 + overflow / 40px;
+        property <float> phase: Math.mod(animation-tick() / 1s, cycle);
+        height: t.preferred-height;
+        clip: true;
+        t := Text {
+            text: root.text;
+            color: root.fill;
+            font-size: root.font-size;
+            font-weight: root.font-weight;
+            wrap: no-wrap;
+            x: overflow > 0px ? -overflow * Math.clamp((phase - 1.5) / (cycle - 3.0), 0, 1) : (root.width - self.width) / 2;
+        }
+    }
+
     export component MainWindow inherits Window {
         in property <bool> online;
         in property <bool> playing;
@@ -84,6 +105,7 @@ slint::slint! {
         callback volume-released(float);
         callback toggle-mute();
         callback save-host(string);
+        callback open-url(string);
 
         title: "Volumio Remote";
         min-width: 320px;
@@ -141,33 +163,14 @@ slint::slint! {
                         Rectangle {
                             width: 180px;
                             height: 180px;
-                            border-radius: 12px;
+                            border-radius: 16px;
                             clip: true;
                             Image { source: art; width: 100%; height: 100%; image-fit: cover; }
                         }
                     }
-                    Text {
-                        text: online ? (title-text != "" ? title-text : "Nothing playing") : "—";
-                        color: fg;
-                        font-size: 20px;
-                        font-weight: 700;
-                        horizontal-alignment: center;
-                        overflow: elide;
-                    }
-                    Text {
-                        text: artist-text;
-                        color: sub;
-                        font-size: 15px;
-                        horizontal-alignment: center;
-                        overflow: elide;
-                    }
-                    Text {
-                        text: album-text;
-                        color: sub;
-                        font-size: 12px;
-                        horizontal-alignment: center;
-                        overflow: elide;
-                    }
+                    Marquee { text: online ? (title-text != "" ? title-text : "Nothing playing") : "—"; fill: fg; font-size: 20px; font-weight: 700; }
+                    Marquee { text: artist-text; fill: sub; font-size: 15px; }
+                    Marquee { text: album-text; fill: sub; font-size: 12px; }
                 }
             }
 
@@ -220,6 +223,18 @@ slint::slint! {
                             on-fill: accent; off-fill: dark ? #2b2f39 : #e6e8ee;
                             on-text: white; off-text: fg;
                             clicked => { set-offline-tray(t); }
+                        }
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                    Text { text: "© Birk Bremer"; color: sub; font-size: 12px; horizontal-alignment: center; }
+                    Text {
+                        text: "github.com/bdynamic/volumio-remote";
+                        color: accent;
+                        font-size: 12px;
+                        horizontal-alignment: center;
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { open-url("https://github.com/bdynamic/volumio-remote"); }
                         }
                     }
                 }
@@ -389,6 +404,9 @@ impl Ui {
             }
         });
         let c = core.clone();
+        win.on_open_url(|u| {
+            let _ = std::process::Command::new("xdg-open").arg(u.as_str()).spawn();
+        });
         win.on_save_host(move |h| c.set_host(h.as_str()));
 
         let weak = win.as_weak();
