@@ -62,7 +62,19 @@ pub fn parse_mute(out: &str) -> Option<bool> {
     }
 }
 
+/// Language independent: `pactl --format=json list sinks` (PulseAudio/PipeWire >= 16).
+pub fn parse_sink_json(text: &str) -> Option<(u8, bool)> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    let sink = v.as_array()?.iter().find(|s| s["name"] == SINK)?;
+    let pct = sink["volume"].as_object()?.values().next()?["value_percent"].as_str()?;
+    Some((pct.trim_end_matches('%').parse::<u32>().ok()?.min(100) as u8, sink["mute"].as_bool()?))
+}
+
 fn read_sink() -> Option<(u8, bool)> {
+    if let Some(r) = pactl(&["--format=json", "list", "sinks"]).and_then(|t| parse_sink_json(&t)) {
+        return Some(r);
+    }
+    // Fallback: text output (forced C locale).
     let vol = parse_volume(&pactl(&["get-sink-volume", SINK])?)?;
     let mute = pactl(&["get-sink-mute", SINK]).and_then(|m| parse_mute(&m)).unwrap_or(false);
     Some((vol, mute))
@@ -84,7 +96,7 @@ pub fn diagnose() {
     let Ok(mut child) = Command::new("timeout").args(["15", "pactl", "subscribe"]).env("LC_ALL", "C").stdout(Stdio::piped()).spawn() else { return };
     if let Some(out) = child.stdout.take() {
         for line in BufReader::new(out).lines().map_while(Result::ok) {
-            if line.contains(" on sink ") || line.contains(" on server") {
+            if line.contains("sink #") || line.contains("server") {
                 let sink = read_sink();
                 println!("{line}  -> {SINK}: {sink:?}");
                 // Same steps as the app: compare with Volumio, send, re-read.
@@ -136,7 +148,8 @@ pub fn start(core: Arc<Core>) {
         if let Ok(mut child) = child {
             if let Some(out) = child.stdout.take() {
                 for line in BufReader::new(out).lines().map_while(Result::ok) {
-                    if !line.contains(" on sink ") {
+                    // "Event 'change' on sink #5": only "Event"/"on" are translated, "sink #" is not.
+                    if !line.contains("sink #") {
                         continue;
                     }
                     LAST_KNOB_MS.store(now_ms(), Ordering::SeqCst);
@@ -161,6 +174,14 @@ pub fn start(core: Arc<Core>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_json() {
+        let j = r#"[{"name":"other","mute":true,"volume":{"mono":{"value_percent":"9%"}}},
+                    {"name":"volumio_remote","mute":false,"volume":{"front-left":{"value":32768,"value_percent":"50%"},"front-right":{"value":32768,"value_percent":"50%"}}}]"#;
+        assert_eq!(parse_sink_json(j), Some((50, false)));
+        assert_eq!(parse_sink_json("[]"), None);
+    }
 
     #[test]
     fn parses_pactl() {
