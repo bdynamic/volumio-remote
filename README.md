@@ -67,7 +67,7 @@ opacity=100          # 30..100
 
 ## Releases
 
-Prebuilt Linux x86_64 binaries are attached to the [GitHub releases](../../releases), built by a manually started workflow (`.github/workflows/release.yml`).
+Prebuilt Linux x86_64 binaries are attached to the [GitHub releases](../../releases), built by a workflow that runs manually or when a `v*` tag is pushed (`.github/workflows/release.yml`).
 
 ## Development
 

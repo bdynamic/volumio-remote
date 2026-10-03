@@ -26,7 +26,7 @@ Tested in container with temp `$HOME`: build, install, restart, single instance.
 
 | Item | Value |
 |---|---|
-| Workflow | `.github/workflows/release.yml`, trigger: manual only (Actions tab -> Release -> Run workflow) |
+| Workflow | `.github/workflows/release.yml`, trigger: manual (Actions tab -> Release -> Run workflow) or push of a tag `v*`; the tag must equal `v<Cargo version>` |
 | Steps | install libs (apt), `cargo test`, `cargo build --release`, pack `volumio-remote-v<version>-linux-x86_64.tar.gz`, `gh release create v<version>` |
 | Version | read from `Cargo.toml`; bump it before running. Uses tag `v<version>` if it exists, else creates it; fails if that release already exists |
 | Binary | built on Ubuntu (glibc), dynamically linked to fontconfig/xkbcommon/xcb |

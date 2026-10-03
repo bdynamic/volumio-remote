@@ -1,9 +1,11 @@
-# Manual only: Actions tab -> "Release" -> "Run workflow".
-# Builds on Ubuntu (glibc), tags v<version from Cargo.toml> and publishes the binary as a release.
+# Starts manually (Actions tab -> "Release" -> "Run workflow") or when a tag v* is pushed.
+# Builds on Ubuntu (glibc), uses/creates tag v<version from Cargo.toml> and publishes the binary as a release.
 name: Release
 
 on:
   workflow_dispatch:
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: write
@@ -37,6 +39,11 @@ jobs:
           mkdir "$name"
           cp target/release/volumio-remote LICENSE README.md "$name/"
           tar czf "$name.tar.gz" "$name"
+          # tag push: the tag must match the Cargo.toml version
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match Cargo.toml version $version" >&2
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "asset=$name.tar.gz" >> "$GITHUB_OUTPUT"
 
