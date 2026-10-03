@@ -56,7 +56,7 @@ Priority: M = must, S = should, C = could. Status values: **done** = implemented
 | F-46 | M | `install.sh`: pull, build, install, autostart, restart, remove legacy `volumiox` files | done |
 | F-47 | M | Version 1.1.0 (from `Cargo.toml`) shown in settings dialog | done |
 | F-48 | M | GPL-3.0-or-later license (`LICENSE`) | done |
-| F-49 | S | Cover art corners rounded (16 px, same as the card) | done |
+| F-49 | S | Cover art corners rounded (16 px, same as the card): image is center-cropped to a square, scaled to 360 px and corners get an alpha mask in Rust (the Slint software renderer ignores rounded `clip`) | done (untested, no compiler in container) |
 | F-50 | S | Title, artist, album scroll horizontally (pause, scroll, pause) when wider than the window; centered otherwise | done |
 | F-51 | S | Settings footer: copyright "Birk Bremer" and clickable GitHub link (`xdg-open`) | done |
 

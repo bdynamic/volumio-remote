@@ -61,8 +61,32 @@ pub fn fetch_art(host: &str, art: &str) -> Result<(u32, u32, Vec<u8>), String> {
         .body_mut()
         .read_to_vec()
         .map_err(|e| e.to_string())?;
-    let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?.to_rgba8();
+    let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?;
+    // Center-crop to a square, scale to ART_PX and round the corners in the pixels:
+    // the Slint software renderer does not clip to a rounded rectangle.
+    let side = img.width().min(img.height());
+    let img = img.crop_imm((img.width() - side) / 2, (img.height() - side) / 2, side, side);
+    let mut img = img.resize_exact(ART_PX, ART_PX, image::imageops::FilterType::Triangle).to_rgba8();
+    round_corners(&mut img, ART_RADIUS_PX);
     Ok((img.width(), img.height(), img.into_raw()))
+}
+
+/// Cover art size in pixels (shown at 180 px, 2x for HiDPI) and corner radius (16 px, 2x).
+const ART_PX: u32 = 360;
+const ART_RADIUS_PX: f32 = 32.0;
+
+/// Make pixels outside the rounded square transparent (1 px antialiased edge).
+fn round_corners(img: &mut image::RgbaImage, r: f32) {
+    let (w, h) = (img.width() as f32, img.height() as f32);
+    for (x, y, px) in img.enumerate_pixels_mut() {
+        // distance of the pixel center into the corner square; <= 0 means outside the corner area
+        let dx = r - (x as f32 + 0.5).min(w - x as f32 - 0.5);
+        let dy = r - (y as f32 + 0.5).min(h - y as f32 - 0.5);
+        if dx > 0.0 && dy > 0.0 {
+            let cover = (r - (dx * dx + dy * dy).sqrt() + 0.5).clamp(0.0, 1.0);
+            px.0[3] = (px.0[3] as f32 * cover) as u8;
+        }
+    }
 }
 
 /// Fetch current state. Any error means "offline".
@@ -120,6 +144,15 @@ mod tests {
         let i = parse_state("{}").unwrap();
         assert_eq!(i, Info::default());
         assert!(parse_state("nope").is_none());
+    }
+
+    #[test]
+    fn rounds_corners() {
+        let mut img = image::RgbaImage::from_pixel(100, 100, image::Rgba([255, 0, 0, 255]));
+        round_corners(&mut img, 20.0);
+        assert_eq!(img.get_pixel(0, 0).0[3], 0); // corner transparent
+        assert_eq!(img.get_pixel(50, 50).0[3], 255); // center untouched
+        assert_eq!(img.get_pixel(50, 0).0[3], 255); // edge middle untouched
     }
 
     #[test]
