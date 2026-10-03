@@ -71,9 +71,9 @@ pub fn fetch_art(host: &str, art: &str) -> Result<(u32, u32, Vec<u8>), String> {
     Ok((img.width(), img.height(), img.into_raw()))
 }
 
-/// Cover art size in pixels (shown at 180 px, 2x for HiDPI) and corner radius (16 px, 2x).
+/// Cover art size in pixels (shown at 180 px, 2x for HiDPI) and corner radius (about 10.5 px, 2x).
 const ART_PX: u32 = 360;
-const ART_RADIUS_PX: f32 = 32.0;
+const ART_RADIUS_PX: f32 = 21.0;
 
 /// Make pixels outside the rounded square transparent (1 px antialiased edge).
 fn round_corners(img: &mut image::RgbaImage, r: f32) {

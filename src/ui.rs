@@ -170,7 +170,7 @@ slint::slint! {
                     padding: 20px;
                     spacing: 6px;
                     alignment: center;
-                    // cover art: corners are rounded in the pixels (volumio::fetch_art), 16 px like the card
+                    // cover art: corners are rounded in the pixels (volumio::fetch_art), about 10.5 px
                     if has-art: HorizontalLayout {
                         alignment: center;
                         padding-bottom: 10px;
