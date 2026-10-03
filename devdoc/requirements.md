@@ -47,6 +47,7 @@ Status: see Implementation status below.
 | F-38 | M | Volume sink is synced to Volumio volume at start and on every change, so knob starts at the real volume | fix: new sink started at 100% and knob-up did nothing |
 | F-39 | S | Window opacity 30..100 % slider in settings, live, persisted (`opacity=`); implemented as alpha on window/card background (needs compositor, Cinnamon has one) | new |
 | F-41 | M | While the knob is turned (sink events within 1.5 s), Volumio -> sink sync pauses so intermediate Volumio values cannot move the sink back | fix for fast knob turns |
+| F-43 | M | All `pactl` calls incl. `pactl subscribe` run with `LC_ALL=C`; event filter must not depend on the user locale | root cause of dead knob on the user's (German) system: diagnose worked, app ignored translated event lines |
 | F-42 | M | App stderr (panics, tray/MPRIS errors) is logged to `~/.cache/volumio-remote.log` for autostart and `install.sh` starts; failed `git pull` does not abort install | support: app instances were found dead on the user machine |
 | F-40 | S | `--diagnose-knob`: prints default sink, sink list, `volumio_remote` volume; for 15 s each sink event is forwarded like the app does (compare with Volumio, send `Volume(n)`, re-read) and the result printed | support for F-28 |
 | F-29 | C | Album art in MPRIS `mpris:artUrl` | new |

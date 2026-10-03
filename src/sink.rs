@@ -125,7 +125,14 @@ pub fn start(core: Arc<Core>) {
     sync(&core.snapshot());
     // sink -> Volumio
     std::thread::spawn(move || loop {
-        let child = Command::new("pactl").arg("subscribe").stdout(Stdio::piped()).stderr(Stdio::null()).spawn();
+        // C locale: event lines are translated otherwise ("auf Sink #"), the filter below would miss them.
+        let child = Command::new("pactl")
+            .arg("subscribe")
+            .env("LC_ALL", "C")
+            .env("LANGUAGE", "C")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn();
         if let Ok(mut child) = child {
             if let Some(out) = child.stdout.take() {
                 for line in BufReader::new(out).lines().map_while(Result::ok) {
