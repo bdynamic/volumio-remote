@@ -1,7 +1,42 @@
-__pycache__/
-*.pyc
+# build output
+target/
+*.new
+
+# local scratch / reference projects
+tmp/
+
+# secrets, keys, personal data (CLAUDE.md: never commit)
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+id_ed25519*
+credentials*
+secrets*
+*.secret
 *.local
 config.json
-tmp/
-target/
+**/volumio-remote/config
+
+# editors / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# python helpers
+__pycache__/
+*.pyc
+
+# logs, dumps
+*.log
+core
+core.*
+!src/core.rs
