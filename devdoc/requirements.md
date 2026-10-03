@@ -30,7 +30,7 @@ Status: all open.
 | F-20 | C | Validate host input | absent in original |
 | F-21 | M | Modern UI, same functions as F-01..F-16 | new (original: dated Qt Widgets look) |
 | F-22 | M | UI follows system light/dark theme | new |
-| F-23 | M | Register as media player on OS (Linux: MPRIS2 over D-Bus, name `org.mpris.MediaPlayer2.volumiox`) | new |
+| F-23 | M | Register as media player on OS (Linux: MPRIS2 over D-Bus, name `org.mpris.MediaPlayer2.volumio_remote`) | new |
 | F-24 | M | MPRIS methods `Play`, `Pause`, `PlayPause`, `Stop`, `Next`, `Previous` -> Volumio commands | new |
 | F-25 | M | MPRIS properties `PlaybackStatus`, `Metadata` (title, artist, album) kept in sync with Volumio state | new |
 | F-26 | M | Keyboard media keys (play/pause/next/prev) control Volumio via F-23/24 | new; desktop routes keys to MPRIS player |
@@ -83,7 +83,7 @@ Options for F-28 (decide later):
 |---|---|---|---|
 | A | Create virtual null sink "Volumio"; user selects it as default; app watches sink volume (`pactl subscribe` / `pw` API) and forwards to Volumio | Works on X11+Wayland, no root | User must pick sink as default; local audio then silent (fine: Volumio plays remotely) |
 | B | Global key grab of `XF86AudioRaiseVolume/LowerVolume/Mute` | Simple | X11 only; Wayland blocks; conflicts with desktop handler |
-| C | Desktop custom shortcut calling CLI `volumiox --vol-up` | Works everywhere | Manual user setup; overrides default volume keys |
+| C | Desktop custom shortcut calling CLI `volumio-remote --vol-up` | Works everywhere | Manual user setup; overrides default volume keys |
 | D | Skip; use `playerctl volume` / app slider only | Zero effort | No knob support |
 
 User system: Cinnamon, X11. MPRIS works (Cinnamon sound applet shows it). Volume keys go to default sink -> A works; B technically possible on X11 but collides with Cinnamon's key binding (rebind in Keyboard settings first).

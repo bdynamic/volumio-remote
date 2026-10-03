@@ -3,7 +3,7 @@
 # Usage: ./install.sh [--no-pull] [--no-start]
 set -euo pipefail
 
-NAME=volumiox
+NAME=volumio-remote
 BIN_DIR="${HOME}/.local/bin"
 AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
@@ -50,7 +50,7 @@ mv -f "$BIN_DIR/$NAME.new" "$BIN_DIR/$NAME"   # atomic, works while running
 cat > "$AUTOSTART_DIR/$NAME.desktop" <<DESK
 [Desktop Entry]
 Type=Application
-Name=VolumioX
+Name=Volumio Remote
 Comment=Remote control for Volumio
 Exec=$BIN_DIR/$NAME
 Icon=multimedia-player

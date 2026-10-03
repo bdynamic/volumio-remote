@@ -11,7 +11,7 @@ Cinnamon SNI tray in Rust, 502 lines, single file. Same desktop as target.
 
 ## Patterns to reuse
 
-| Pattern | How | Use in volumiox |
+| Pattern | How | Use in volumio-remote |
 |---|---|---|
 | Tray as struct impl `ksni::Tray` | `id`, `title`, `icon_name`, `menu` | tray with themed icon names |
 | Icon by theme name | e.g. `audio-input-microphone`, `media-record` | online: `multimedia-player`/`media-playback-*`; offline: gray variant (F-31) |

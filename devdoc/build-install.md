@@ -3,9 +3,9 @@
 | Step | What |
 |---|---|
 | Toolchain | rustup stable (`~/.cargo`). Container: Alpine/musl, host: Mint/glibc -> **build on host** with `install.sh` |
-| `./install.sh` | `git pull --ff-only` (if upstream), `cargo build --release`, install to `~/.local/bin/volumiox`, write autostart + app `.desktop`, kill old instance, start new |
+| `./install.sh` | `git pull --ff-only` (if upstream), `cargo build --release`, install to `~/.local/bin/volumio-remote`, write autostart + app `.desktop`, kill old instance, start new |
 | Flags | `--no-pull`, `--no-start` |
-| Autostart | `~/.config/autostart/volumiox.desktop` |
+| Autostart | `~/.config/autostart/volumio-remote.desktop` |
 | Host deps (Debian/Mint) | `sudo apt install build-essential pkg-config libfontconfig1-dev libxkbcommon-dev libxcb1-dev` (Slint; list to be verified) |
 | Container deps (apk) | `build-base fontconfig-dev freetype-dev libxkbcommon-dev libxcb-dev pkgconf` |
 
