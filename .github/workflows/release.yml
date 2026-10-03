@@ -1,0 +1,50 @@
+# Manual only: Actions tab -> "Release" -> "Run workflow".
+# Builds on Ubuntu (glibc), tags v<version from Cargo.toml> and publishes the binary as a release.
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libfontconfig1-dev libxkbcommon-dev libxcb1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Test
+        run: cargo test --release
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Package
+        id: pkg
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          name="volumio-remote-v${version}-linux-x86_64"
+          mkdir "$name"
+          cp target/release/volumio-remote LICENSE README.md "$name/"
+          tar czf "$name.tar.gz" "$name"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "asset=$name.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.pkg.outputs.version }}" "${{ steps.pkg.outputs.asset }}" \
+            --target "$GITHUB_SHA" \
+            --title "v${{ steps.pkg.outputs.version }}" \
+            --generate-notes

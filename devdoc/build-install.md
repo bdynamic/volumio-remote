@@ -21,3 +21,12 @@ Tested in container with temp `$HOME`: build, install, restart, single instance.
 
 - `git pull` failure (e.g. no network) is a warning; build continues with local sources.
 - Exited instances show as `<defunct>` in `pgrep` when the parent does not reap them; they are not running. Check `~/.cache/volumio-remote.log` for the exit reason.
+
+## GitHub release
+
+| Item | Value |
+|---|---|
+| Workflow | `.github/workflows/release.yml`, trigger: manual only (Actions tab -> Release -> Run workflow) |
+| Steps | install libs (apt), `cargo test`, `cargo build --release`, pack `volumio-remote-v<version>-linux-x86_64.tar.gz`, `gh release create v<version>` |
+| Version | read from `Cargo.toml`; bump it before running. Fails if tag `v<version>` already exists |
+| Binary | built on Ubuntu (glibc), dynamically linked to fontconfig/xkbcommon/xcb |
