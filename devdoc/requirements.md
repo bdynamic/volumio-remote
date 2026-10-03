@@ -88,7 +88,7 @@ Options for F-28 (decide later):
 
 User system: Cinnamon, X11. MPRIS works (Cinnamon sound applet shows it). Volume keys go to default sink -> A works; B technically possible on X11 but collides with Cinnamon's key binding (rebind in Keyboard settings first).
 
-Recommendation: A, fallback C. Verify on target desktop first (spike).
+**Decision: A (virtual sink), fallback C (CLI + Cinnamon shortcut).** Verify on target desktop first (spike).
 
 ## Out of scope (original)
 
