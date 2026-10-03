@@ -73,6 +73,8 @@ slint::slint! {
         in-out property <bool> settings-open;
         in-out property <string> theme-mode: "auto";
         in-out property <string> offline-tray: "gray";
+        in-out property <float> opacity-pct: 100;
+        callback set-opacity(float);
         callback set-theme(string);
         callback set-offline-tray(string);
         callback toggle();
@@ -87,13 +89,13 @@ slint::slint! {
         min-height: 470px;
         preferred-width: 360px;
         preferred-height: 520px;
-        background: dark ? #14161b : #f3f4f7;
+        background: (dark ? #14161b : #f3f4f7).with-alpha(opacity-pct / 100);
         changed dark => { Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light; }
         init => { Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light; }
 
         property <color> fg: dark ? #f2f3f5 : #14161b;
         property <color> sub: dark ? #9aa0ab : #5d6470;
-        property <color> card: dark ? #1f222a : #ffffff;
+        property <color> card: (dark ? #1f222a : #ffffff).with-alpha(opacity-pct / 100);
         property <color> accent: rgb(46, 125, 255);
 
         VerticalLayout {
@@ -197,6 +199,13 @@ slint::slint! {
                             on-text: white; off-text: fg;
                             clicked => { set-theme(t); }
                         }
+                    }
+                    Text { text: "Window opacity: " + round(opacity-pct) + " %"; color: sub; font-size: 12px; }
+                    Slider {
+                        minimum: 30;
+                        maximum: 100;
+                        value <=> root.opacity-pct;
+                        released(v) => { set-opacity(v); }
                     }
                     Text { text: "Tray icon when Volumio is offline"; color: sub; font-size: 12px; }
                     HorizontalLayout {
@@ -340,6 +349,7 @@ impl Ui {
             let c = core.cfg.lock().unwrap();
             win.set_theme_mode(c.theme.clone().into());
             win.set_offline_tray(c.offline_tray.clone().into());
+            win.set_opacity_pct(c.opacity as f32);
         }
         apply(&win, &core.snapshot());
 
@@ -364,6 +374,8 @@ impl Ui {
                 w.set_dark(detect_dark(&t));
             }
         });
+        let c = core.clone();
+        win.on_set_opacity(move |v| c.set_option("opacity", &(v.round() as u8).to_string()));
         let (c, w) = (core.clone(), win.as_weak());
         win.on_set_offline_tray(move |t| {
             c.set_option("offline_tray", &t);

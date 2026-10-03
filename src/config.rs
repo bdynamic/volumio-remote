@@ -9,11 +9,13 @@ pub struct Config {
     pub offline_tray: String,
     /// "auto" | "dark" | "light"
     pub theme: String,
+    /// window opacity in percent, 30..=100
+    pub opacity: u8,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Config { host: "volumio.local".into(), offline_tray: "gray".into(), theme: "auto".into() }
+        Config { host: "volumio.local".into(), offline_tray: "gray".into(), theme: "auto".into(), opacity: 100 }
     }
 }
 
@@ -33,6 +35,11 @@ pub fn parse(text: &str) -> Config {
             "host" if !v.is_empty() => c.host = v.trim_start_matches("http://").trim_end_matches('/').into(),
             "offline_tray" if v == "gray" || v == "hide" => c.offline_tray = v.into(),
             "theme" if matches!(v, "auto" | "dark" | "light") => c.theme = v.into(),
+            "opacity" => {
+                if let Ok(n) = v.parse::<u8>() {
+                    c.opacity = n.clamp(30, 100);
+                }
+            }
             _ => {}
         }
     }
@@ -48,7 +55,7 @@ pub fn save(c: &Config) -> std::io::Result<()> {
     if let Some(d) = p.parent() {
         std::fs::create_dir_all(d)?;
     }
-    std::fs::write(p, format!("host={}\noffline_tray={}\ntheme={}\n", c.host, c.offline_tray, c.theme))
+    std::fs::write(p, format!("host={}\noffline_tray={}\ntheme={}\nopacity={}\n", c.host, c.offline_tray, c.theme, c.opacity))
 }
 
 #[cfg(test)]
@@ -58,8 +65,9 @@ mod tests {
     #[test]
     fn parses_and_defaults() {
         assert_eq!(parse(""), Config::default());
-        let c = parse("host=http://192.168.1.10/\noffline_tray=hide\ntheme=dark\nbogus\n");
+        let c = parse("host=http://192.168.1.10/\noffline_tray=hide\ntheme=dark\nopacity=10\nbogus\n");
         assert_eq!((c.host.as_str(), c.offline_tray.as_str(), c.theme.as_str()), ("192.168.1.10", "hide", "dark"));
         assert_eq!(parse("offline_tray=x").offline_tray, "gray");
+        assert_eq!((c.opacity, parse("opacity=70").opacity, parse("opacity=x").opacity), (30, 70, 100));
     }
 }

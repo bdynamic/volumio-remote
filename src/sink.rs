@@ -61,6 +61,24 @@ fn debug() -> bool {
     std::env::var_os("VR_DEBUG").is_some()
 }
 
+/// `volumio-remote --diagnose-knob`: prints what the knob path sees for 15 s.
+pub fn diagnose() {
+    println!("pactl available: {}", available());
+    println!("{}", pactl(&["info"]).unwrap_or_default().lines().filter(|l| l.contains("Server Name") || l.contains("Default Sink")).collect::<Vec<_>>().join("\n"));
+    println!("sinks:\n{}", pactl(&["list", "short", "sinks"]).unwrap_or_default());
+    println!("sink {SINK} exists: {}", pactl(&["list", "short", "sinks"]).is_some_and(|s| s.lines().any(|l| l.split_whitespace().nth(1) == Some(SINK))));
+    println!("sink {SINK} now: {:?}", read_sink());
+    println!("Turn the volume knob now (15 s). Events:");
+    let Ok(mut child) = Command::new("timeout").args(["15", "pactl", "subscribe"]).env("LC_ALL", "C").stdout(Stdio::piped()).spawn() else { return };
+    if let Some(out) = child.stdout.take() {
+        for line in BufReader::new(out).lines().map_while(Result::ok) {
+            if line.contains(" on sink ") || line.contains(" on server") {
+                println!("{line}  -> {SINK}: {:?}", read_sink());
+            }
+        }
+    }
+}
+
 pub fn start(core: Arc<Core>) {
     if !available() || !ensure() {
         eprintln!("volumio-remote: pactl/sink unavailable, volume knob disabled");

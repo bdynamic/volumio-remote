@@ -24,6 +24,10 @@ fn cli(args: &[String]) -> bool {
         Some("--prev") => volumio::send(&host, Cmd::Prev),
         Some("--vol-up") => step(5),
         Some("--vol-down") => step(-5),
+        Some("--diagnose-knob") => {
+            sink::diagnose();
+            return true;
+        }
         Some("--mute") => volumio::send(&host, Cmd::Mute(true)),
         Some("--help") | Some("-h") => {
             println!("volumio-remote [--show] | --toggle | --next | --prev | --vol-up | --vol-down | --mute");

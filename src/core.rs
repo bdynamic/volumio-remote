@@ -92,6 +92,7 @@ impl Core {
             match key {
                 "theme" => c.theme = val.to_string(),
                 "offline_tray" => c.offline_tray = val.to_string(),
+                "opacity" => c.opacity = val.parse().unwrap_or(100u8).clamp(30, 100),
                 _ => return,
             }
             c.clone()
