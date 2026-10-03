@@ -33,3 +33,4 @@ volumio-remote: lightweight Linux desktop remote for a Volumio instance on the l
 - [Build and install](devdoc/build-install.md)
 - [Architecture](devdoc/architecture.md)
 - [Volume knob](devdoc/volume-knob.md)
+- [Troubleshooting](devdoc/troubleshooting.md)
