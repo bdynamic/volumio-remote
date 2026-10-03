@@ -186,6 +186,11 @@ slint::slint! {
                     Marquee { text: artist-text; fill: sub; font-size: 15px; }
                     Marquee { text: album-text; fill: sub; font-size: 12px; }
                 }
+                // click on cover/title area opens the Volumio web UI
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { open-url("http://" + host); }
+                }
             }
 
             // settings card (replaces the now-playing card)

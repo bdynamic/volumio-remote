@@ -4,7 +4,7 @@ Lightweight Linux desktop remote for a [Volumio](https://volumio.com) instance o
 
 ## Features
 
-- Now-playing window: cover art with rounded corners, title, artist, album; long texts scroll
+- Now-playing window: cover art with rounded corners, title, artist, album; long texts scroll; click on it opens the Volumio web UI in the browser
 - Play/pause, previous/next, mute, volume slider
 - Dark and light theme (auto-follows GTK theme), adjustable window opacity
 - System tray icon (StatusNotifierItem); grayed out or hidden while Volumio is offline

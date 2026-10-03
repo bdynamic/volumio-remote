@@ -59,6 +59,7 @@ Priority: M = must, S = should, C = could. Status values: **done** = implemented
 | F-49 | S | Cover art corners rounded (about 10.5 px, two thirds of the card radius): image is center-cropped to a square, scaled to 360 px and corners (21 px at 360 px) get an alpha mask in Rust (the Slint software renderer ignores rounded `clip`) | done (confirmed on host) |
 | F-50 | S | Title, artist, album scroll horizontally (pause, scroll, pause) when wider than the window; centered otherwise | done (confirmed on host) |
 | F-51 | S | Settings footer: copyright "Birk Bremer" and clickable GitHub link (`xdg-open`) | done (confirmed on host) |
+| F-53 | S | Click on the now-playing card (cover, title, artist, album) opens `http://<host>` in the default browser (`xdg-open`) | done (built, not clicked on host) |
 | F-52 | S | GitHub Actions workflow `release.yml`, manual start (`workflow_dispatch`) or push of a tag `v*` (tag must equal the Cargo version): test, release build on Ubuntu, tag `v<Cargo version>`, release with `tar.gz` (binary, LICENSE, README) | open (not run yet) |
 
 ## Non-functional
