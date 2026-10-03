@@ -46,6 +46,7 @@ Status: see Implementation status below.
 | F-37 | M | Offline tray behavior switch in settings (Grayed out / Hidden), persisted, applied live | implements F-34 UI |
 | F-38 | M | Volume sink is synced to Volumio volume at start and on every change, so knob starts at the real volume | fix: new sink started at 100% and knob-up did nothing |
 | F-39 | S | Window opacity 30..100 % slider in settings, live, persisted (`opacity=`); implemented as alpha on window/card background (needs compositor, Cinnamon has one) | new |
+| F-41 | M | While the knob is turned (sink events within 1.5 s), Volumio -> sink sync pauses so intermediate Volumio values cannot move the sink back | fix for fast knob turns |
 | F-40 | S | `--diagnose-knob`: prints default sink, sink list, `volumio_remote` volume and live sink events for 15 s | support for F-28 |
 | F-29 | C | Album art in MPRIS `mpris:artUrl` | new |
 
@@ -70,7 +71,8 @@ Tested in container (Xvfb + private D-Bus) against a real Volumio; screenshots c
 | F-33 | done | |
 | F-34, F-37 | done; UI tested, tray effect untested | settings switch, `offline_tray=hide` -> SNI status Passive, applied live |
 | F-39 | done; ARGB window (X11 depth 32) verified in container, translucency itself untested (no compositor) | |
-| F-40 | done | |
+| F-40 | done; user run on Cinnamon: default sink OK, sink events arrive (35..60 %) | |
+| F-41 | done, tested with rapid steps in container | | |
 | F-35, F-36 | done, tested | screenshots dark + light, config persisted |
 | F-38 | done, tested | real PulseAudio + fake Volumio in container: sink starts at Volumio volume, knob steps and mute reach Volumio |
 | Fallback C | done | `--toggle --next --prev --vol-up --vol-down --mute` |

@@ -5,10 +5,21 @@ use crate::core::Core;
 use crate::volumio::Cmd;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, OnceLock};
+use std::time::Instant;
 use std::time::Duration;
 
 pub const SINK: &str = "volumio_remote";
+
+/// Time of the last sink event (ms since first use). Volumio -> sink sync pauses
+/// while the knob is being turned, else an intermediate Volumio value fights the user.
+static LAST_KNOB_MS: AtomicU64 = AtomicU64::new(0);
+static T0: OnceLock<Instant> = OnceLock::new();
+
+fn now_ms() -> u64 {
+    T0.get_or_init(Instant::now).elapsed().as_millis() as u64 + 10_000
+}
 
 fn pactl(args: &[&str]) -> Option<String> {
     // pactl output is localized ("Stumm: ja"): force C locale for parsing.
@@ -87,6 +98,9 @@ pub fn start(core: Arc<Core>) {
     // Volumio -> sink (keeps knob position in sync; no-op when equal).
     // Also run once now: a new sink starts at 100%, so the knob could not go up.
     fn sync(s: &Option<crate::volumio::Info>) {
+        if now_ms().saturating_sub(LAST_KNOB_MS.load(Ordering::SeqCst)) < 1500 {
+            return;
+        }
         if let Some(i) = s {
             if read_sink().is_some_and(|(v, _)| v != i.volume) {
                 pactl(&["set-sink-volume", SINK, &format!("{}%", i.volume)]);
@@ -104,6 +118,7 @@ pub fn start(core: Arc<Core>) {
                     if !line.contains(" on sink ") {
                         continue;
                     }
+                    LAST_KNOB_MS.store(now_ms(), Ordering::SeqCst);
                     let (Some((vol, mute)), Some(info)) = (read_sink(), core.snapshot()) else { continue };
                     if debug() {
                         eprintln!("volumio-remote: sink vol={vol} mute={mute}, volumio vol={} mute={}", info.volume, info.mute);
