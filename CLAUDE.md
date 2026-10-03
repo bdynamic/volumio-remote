@@ -1,7 +1,7 @@
 This file provides guidance for AI Assistants
 
 ## Project short description
-<add short description of project>
+volumio-remote: lightweight Linux desktop remote for a Volumio instance on the local network (Rust + Slint). Now-playing window with cover art, tray icon, MPRIS media keys and a virtual audio sink for the volume knob.
 
 ## General
 - Be brief, techn. precise, direct, honest, no flattery
@@ -9,6 +9,7 @@ This file provides guidance for AI Assistants
 - You can only add links in section below, not change this document otherwise
 - git user name: Auto Coder, auto.coder@dy-mail.de
 - you are running in a Docker container
+- Required tools (e.g. C compiler/linker, build libs) shall be installed in the container
 - Req/arch docs = living. Keep aligned w/ reality. Document every relevant change.
 
 ## Development Approach
