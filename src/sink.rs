@@ -79,12 +79,26 @@ pub fn diagnose() {
     println!("sinks:\n{}", pactl(&["list", "short", "sinks"]).unwrap_or_default());
     println!("sink {SINK} exists: {}", pactl(&["list", "short", "sinks"]).is_some_and(|s| s.lines().any(|l| l.split_whitespace().nth(1) == Some(SINK))));
     println!("sink {SINK} now: {:?}", read_sink());
-    println!("Turn the volume knob now (15 s). Events:");
+    println!("config host: {}", crate::config::load().host);
+    println!("Turn the volume knob now (15 s). Events (this run sends real Volume commands):");
     let Ok(mut child) = Command::new("timeout").args(["15", "pactl", "subscribe"]).env("LC_ALL", "C").stdout(Stdio::piped()).spawn() else { return };
     if let Some(out) = child.stdout.take() {
         for line in BufReader::new(out).lines().map_while(Result::ok) {
             if line.contains(" on sink ") || line.contains(" on server") {
-                println!("{line}  -> {SINK}: {:?}", read_sink());
+                let sink = read_sink();
+                println!("{line}  -> {SINK}: {sink:?}");
+                // Same steps as the app: compare with Volumio, send, re-read.
+                let host = crate::config::load().host;
+                match (sink, crate::volumio::get_state(&host)) {
+                    (Some((v, _)), Ok(i)) if v != i.volume => {
+                        let r = crate::volumio::send(&host, Cmd::Volume(v));
+                        let after = crate::volumio::get_state(&host).map(|i| i.volume);
+                        println!("    {host}: volumio={} -> send Volume({v}): {r:?}, volumio now {after:?}", i.volume);
+                    }
+                    (Some((v, _)), Ok(i)) => println!("    {host}: volumio={} equals sink {v}, nothing to send", i.volume),
+                    (_, Err(e)) => println!("    {host}: getState failed: {e}"),
+                    (None, _) => println!("    cannot read sink"),
+                }
             }
         }
     }
