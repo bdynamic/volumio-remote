@@ -29,3 +29,4 @@ This file provides guidance for AI Assistants
 - [VolumioX research](devdoc/volumiox-research.md)
 - [Requirements](devdoc/requirements.md)
 - [Tray reference](devdoc/tray-reference.md)
+- [Build and install](devdoc/build-install.md)
