@@ -36,6 +36,11 @@ Status: all open.
 | F-26 | M | Keyboard media keys (play/pause/next/prev) control Volumio via F-23/24 | new; desktop routes keys to MPRIS player |
 | F-27 | S | MPRIS `Volume` property get/set <-> Volumio volume (works with `playerctl volume`) | new |
 | F-28 | S | Keyboard volume knob/keys control Volumio volume (see Feasibility) | new |
+| F-30 | M | Check Volumio availability periodically (`/api/v1/ping`, interval 2-5 s, timeout <= 2 s) | extends F-08 |
+| F-31 | M | Offline: tray icon grayed out (user-switchable to hidden); UI controls disabled, show "offline" | new |
+| F-32 | M | Offline: unregister MPRIS service so media keys go to other players; re-register when online | new |
+| F-33 | M | Online again: restore icon, controls, MPRIS, resume polling without restart | new |
+| F-34 | S | Setting: offline tray behavior `gray` (default) / `hide` | new |
 | F-29 | C | Album art in MPRIS `mpris:artUrl` | new |
 
 ## Non-functional
@@ -51,6 +56,7 @@ Status: all open.
 | N-07 | C | Cross-platform (Windows/macOS) |
 | N-08 | M | OS media integration must not need root |
 | N-09 | S | Works on GNOME, KDE; X11 and Wayland |
+| N-10 | M | Target desktop: Cinnamon on X11 (user system); tray via StatusNotifier/XApp |
 
 ## Interface (Volumio REST, base `http://<host>`)
 
@@ -79,6 +85,8 @@ Options for F-28 (decide later):
 | B | Global key grab of `XF86AudioRaiseVolume/LowerVolume/Mute` | Simple | X11 only; Wayland blocks; conflicts with desktop handler |
 | C | Desktop custom shortcut calling CLI `volumiox --vol-up` | Works everywhere | Manual user setup; overrides default volume keys |
 | D | Skip; use `playerctl volume` / app slider only | Zero effort | No knob support |
+
+User system: Cinnamon, X11. MPRIS works (Cinnamon sound applet shows it). Volume keys go to default sink -> A works; B technically possible on X11 but collides with Cinnamon's key binding (rebind in Keyboard settings first).
 
 Recommendation: A, fallback C. Verify on target desktop first (spike).
 
