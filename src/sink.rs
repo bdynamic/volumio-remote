@@ -11,7 +11,8 @@ use std::time::Duration;
 pub const SINK: &str = "volumio_remote";
 
 fn pactl(args: &[&str]) -> Option<String> {
-    let o = Command::new("pactl").args(args).output().ok()?;
+    // pactl output is localized ("Stumm: ja"): force C locale for parsing.
+    let o = Command::new("pactl").args(args).env("LC_ALL", "C").env("LANGUAGE", "C").output().ok()?;
     o.status.success().then(|| String::from_utf8_lossy(&o.stdout).into_owned())
 }
 
@@ -51,7 +52,13 @@ pub fn parse_mute(out: &str) -> Option<bool> {
 }
 
 fn read_sink() -> Option<(u8, bool)> {
-    Some((parse_volume(&pactl(&["get-sink-volume", SINK])?)?, parse_mute(&pactl(&["get-sink-mute", SINK])?)?))
+    let vol = parse_volume(&pactl(&["get-sink-volume", SINK])?)?;
+    let mute = pactl(&["get-sink-mute", SINK]).and_then(|m| parse_mute(&m)).unwrap_or(false);
+    Some((vol, mute))
+}
+
+fn debug() -> bool {
+    std::env::var_os("VR_DEBUG").is_some()
 }
 
 pub fn start(core: Arc<Core>) {
@@ -77,6 +84,9 @@ pub fn start(core: Arc<Core>) {
                         continue;
                     }
                     let (Some((vol, mute)), Some(info)) = (read_sink(), core.snapshot()) else { continue };
+                    if debug() {
+                        eprintln!("volumio-remote: sink vol={vol} mute={mute}, volumio vol={} mute={}", info.volume, info.mute);
+                    }
                     if mute != info.mute {
                         core.run_cmd(Cmd::Mute(mute));
                     }

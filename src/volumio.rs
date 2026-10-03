@@ -8,6 +8,7 @@ pub struct Info {
     pub title: String,
     pub artist: String,
     pub album: String,
+    pub albumart: String, // path or absolute URL
     pub volume: u8,
     pub mute: bool,
 }
@@ -26,24 +27,37 @@ pub fn parse_state(text: &str) -> Option<Info> {
         title: s("title"),
         artist: s("artist"),
         album: s("album"),
+        albumart: s("albumart"),
         volume: v.get("volume").and_then(|x| x.as_f64()).unwrap_or(0.0).clamp(0.0, 100.0) as u8,
         mute: v.get("mute").and_then(|x| x.as_bool()).unwrap_or(false),
     })
 }
 
+fn agent(secs: u64) -> ureq::Agent {
+    ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(secs))).build().into()
+}
+
 fn get(host: &str, path: &str) -> Result<String, String> {
-    let agent: ureq::Agent = ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(2)))
-        .build()
-        .into();
     let url = format!("http://{host}{path}");
-    agent
-        .get(&url)
+    agent(2).get(&url).call().map_err(|e| e.to_string())?.body_mut().read_to_string().map_err(|e| e.to_string())
+}
+
+/// Absolute URL stays; Volumio paths (`/albumart?...`) get `http://<host>` prepended.
+pub fn art_url(host: &str, art: &str) -> String {
+    if art.starts_with("http") { art.to_string() } else { format!("http://{host}{art}") }
+}
+
+/// Downloads cover art and decodes to RGBA8 (width, height, pixels).
+pub fn fetch_art(host: &str, art: &str) -> Result<(u32, u32, Vec<u8>), String> {
+    let bytes = agent(5)
+        .get(&art_url(host, art))
         .call()
         .map_err(|e| e.to_string())?
         .body_mut()
-        .read_to_string()
-        .map_err(|e| e.to_string())
+        .read_to_vec()
+        .map_err(|e| e.to_string())?;
+    let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?.to_rgba8();
+    Ok((img.width(), img.height(), img.into_raw()))
 }
 
 pub fn get_state(host: &str) -> Result<Info, String> {
@@ -97,6 +111,12 @@ mod tests {
         let i = parse_state("{}").unwrap();
         assert_eq!(i, Info::default());
         assert!(parse_state("nope").is_none());
+    }
+
+    #[test]
+    fn builds_art_url() {
+        assert_eq!(art_url("h", "/albumart?x=1"), "http://h/albumart?x=1");
+        assert_eq!(art_url("h", "https://c/x.jpg"), "https://c/x.jpg");
     }
 
     #[test]

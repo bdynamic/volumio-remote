@@ -2,9 +2,9 @@
 
 use crate::core::Core;
 use crate::volumio::{Cmd, Info};
-use slint::ComponentHandle;
+use slint::{ComponentHandle, Image, Rgba8Pixel, SharedPixelBuffer};
 use std::process::Command;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 slint::slint! {
     import { Slider, LineEdit, Button, Palette } from "std-widgets.slint";
@@ -48,6 +48,8 @@ slint::slint! {
         in property <string> title-text;
         in property <string> artist-text;
         in property <string> album-text;
+        in property <image> art;
+        in property <bool> has-art;
         in-out property <float> volume: 50;
         in property <bool> muted;
         in property <bool> dark: true;
@@ -62,9 +64,9 @@ slint::slint! {
 
         title: "Volume Remote";
         min-width: 320px;
-        min-height: 380px;
+        min-height: 470px;
         preferred-width: 360px;
-        preferred-height: 420px;
+        preferred-height: 520px;
         background: dark ? #14161b : #f3f4f7;
         changed dark => { Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light; }
         init => { Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light; }
@@ -110,6 +112,17 @@ slint::slint! {
                     padding: 20px;
                     spacing: 6px;
                     alignment: center;
+                    if has-art: HorizontalLayout {
+                        alignment: center;
+                        padding-bottom: 10px;
+                        Rectangle {
+                            width: 180px;
+                            height: 180px;
+                            border-radius: 12px;
+                            clip: true;
+                            Image { source: art; width: 100%; height: 100%; image-fit: cover; }
+                        }
+                    }
                     Text {
                         text: online ? (title-text != "" ? title-text : "Nothing playing") : "—";
                         color: fg;
@@ -232,6 +245,36 @@ fn apply(w: &MainWindow, s: &Option<Info>) {
     }
 }
 
+/// Download + decode cover art off-thread, then set it on the UI thread.
+fn fetch_art(host: String, art: String, weak: slint::Weak<MainWindow>, current: Arc<Mutex<String>>) {
+    std::thread::spawn(move || {
+        let img = if art.is_empty() {
+            None
+        } else {
+            match crate::volumio::fetch_art(&host, &art) {
+                Ok(i) => Some(i),
+                Err(e) => {
+                    eprintln!("volumio-remote: cover art: {e}");
+                    None
+                }
+            }
+        };
+        if *current.lock().unwrap() != art {
+            return; // track changed meanwhile
+        }
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(w) = weak.upgrade() else { return };
+            match img {
+                Some((wd, ht, px)) => {
+                    w.set_art(Image::from_rgba8(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&px, wd, ht)));
+                    w.set_has_art(true);
+                }
+                None => w.set_has_art(false),
+            }
+        });
+    });
+}
+
 pub struct Ui {
     win: MainWindow,
 }
@@ -260,7 +303,14 @@ impl Ui {
         win.on_save_host(move |h| c.set_host(h.as_str()));
 
         let weak = win.as_weak();
+        let last_art = Arc::new(Mutex::new(String::new()));
+        let c = core.clone();
         core.on_change(move |s| {
+            let art = s.as_ref().map(|i| i.albumart.clone()).unwrap_or_default();
+            let changed = std::mem::replace(&mut *last_art.lock().unwrap(), art.clone()) != art;
+            if changed {
+                fetch_art(c.host(), art, weak.clone(), last_art.clone());
+            }
             let s = s.clone();
             let weak = weak.clone();
             let _ = slint::invoke_from_event_loop(move || {

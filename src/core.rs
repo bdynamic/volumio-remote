@@ -2,6 +2,7 @@
 
 use crate::config::{self, Config};
 use crate::volumio::{self, Cmd, Info};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -11,11 +12,13 @@ pub struct Core {
     pub cfg: Mutex<Config>,
     pub state: Mutex<Option<Info>>,
     listeners: Mutex<Vec<Listener>>,
+    /// Bumped per command: a state fetched before a command is stale and dropped.
+    cmd_seq: AtomicU64,
 }
 
 impl Core {
     pub fn new(cfg: Config) -> Arc<Core> {
-        Arc::new(Core { cfg: Mutex::new(cfg), state: Mutex::new(None), listeners: Mutex::new(vec![]) })
+        Arc::new(Core { cfg: Mutex::new(cfg), state: Mutex::new(None), listeners: Mutex::new(vec![]), cmd_seq: AtomicU64::new(0) })
     }
 
     pub fn on_change(&self, f: impl Fn(&Option<Info>) + Send + Sync + 'static) {
@@ -32,7 +35,11 @@ impl Core {
 
     /// Fetch state; notify listeners when it changed (online/offline included).
     pub fn refresh(&self) {
+        let seq = self.cmd_seq.load(Ordering::SeqCst);
         let new = volumio::get_state(&self.host()).ok();
+        if self.cmd_seq.load(Ordering::SeqCst) != seq {
+            return;
+        }
         {
             let mut cur = self.state.lock().unwrap();
             if *cur == new {
@@ -47,6 +54,7 @@ impl Core {
 
     /// Send command in a worker thread, then refresh.
     pub fn run_cmd(self: &Arc<Self>, c: Cmd) {
+        self.cmd_seq.fetch_add(1, Ordering::SeqCst);
         let core = self.clone();
         std::thread::spawn(move || {
             if let Err(e) = volumio::send(&core.host(), c) {
