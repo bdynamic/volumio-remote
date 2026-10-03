@@ -9,14 +9,17 @@ use ksni::{Icon, Status};
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Thread-safe callback that shows the main window.
 pub type ShowFn = Arc<dyn Fn() + Send + Sync>;
 
+/// ksni tray model; `info` mirrors the Core state (`None` = offline).
 struct VrTray {
     core: Arc<Core>,
     show: ShowFn,
     info: Option<Info>,
 }
 
+/// icon edge length in pixels
 const SIZE: i32 = 32;
 
 /// ARGB32 icon: round badge + play/pause glyph. Offline: gray, translucent.
@@ -28,6 +31,7 @@ fn pixmap(online: bool, playing: bool) -> Icon {
     for y in 0..SIZE {
         for x in 0..SIZE {
             let (fx, fy) = (x as f32 + 0.5, y as f32 + 0.5);
+            // inside the round badge?
             let inside = (fx - c).powi(2) + (fy - c).powi(2) <= (c - 1.0).powi(2);
             let glyph = if playing {
                 // pause bars
@@ -43,6 +47,7 @@ fn pixmap(online: bool, playing: bool) -> Icon {
     Icon { width: SIZE, height: SIZE, data }
 }
 
+/// StatusNotifierItem callbacks: id/title/status/icon/click/menu.
 impl ksni::Tray for VrTray {
     fn id(&self) -> String {
         "volumio-remote".into()
@@ -54,18 +59,22 @@ impl ksni::Tray for VrTray {
             None => "Volumio offline".into(),
         }
     }
+    /// `Passive` hides the icon in most trays (offline + "hide" setting)
     fn status(&self) -> Status {
         if self.info.is_none() && self.core.cfg.lock().unwrap().offline_tray == "hide" { Status::Passive } else { Status::Active }
     }
     fn icon_pixmap(&self) -> Vec<Icon> {
         vec![pixmap(self.info.is_some(), self.info.as_ref().is_some_and(|i| i.playing()))]
     }
+    /// left click on the icon
     fn activate(&mut self, _x: i32, _y: i32) {
         (self.show)();
     }
+    /// Right-click menu; transport entries are disabled while offline.
     fn menu(&self) -> Vec<MenuItem<Self>> {
         let online = self.info.is_some();
         let playing = self.info.as_ref().is_some_and(|i| i.playing());
+        // helper: menu entry that runs a Volumio command
         let cmd = |label: &str, c: Cmd| -> MenuItem<Self> {
             StandardItem {
                 label: label.into(),
@@ -111,6 +120,7 @@ impl ksni::Tray for VrTray {
     }
 }
 
+/// Register the tray icon in a background thread and keep it in sync with Core.
 pub fn spawn(core: Arc<Core>, show: ShowFn) {
     std::thread::spawn(move || {
         let make = || VrTray {

@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 slint::slint! {
     import { Slider, LineEdit, Button, Palette } from "std-widgets.slint";
 
+    // Circular button: dimmed when disabled, lighter on hover, darker on press.
     component RoundButton inherits Rectangle {
         in property <length> size: 52px;
         in property <brush> fill;
@@ -26,6 +27,7 @@ slint::slint! {
         @children
     }
 
+    // One option of a segmented choice (theme, tray behavior).
     component Segment inherits Rectangle {
         in property <string> label;
         in property <bool> active;
@@ -42,6 +44,7 @@ slint::slint! {
         TouchArea { clicked => { root.clicked(); } }
     }
 
+    // Icon drawn as an SVG path in a 20x20 viewbox.
     component Glyph inherits Path {
         in property <string> shape; // play | pause | prev | next | mute | sound
         width: 20px;
@@ -58,11 +61,14 @@ slint::slint! {
             "M 2 7 H 6 L 11 3 V 17 L 6 13 H 2 Z M 14 7 Q 17 10 14 13";
     }
 
+    // Single-line text: centered if it fits, else it scrolls left and back
+    // (pause, scroll, pause; loops via `animation-tick()`).
     component Marquee inherits Rectangle {
         in property <string> text;
         in property <color> fill;
         in property <length> font-size;
         in property <int> font-weight: 400;
+        // hidden text width in px (0 = fits)
         property <length> overflow: max(0px, t.preferred-width - self.width);
         // seconds: 1.5 pause, scroll at 40px/s, 1.5 pause
         property <float> cycle: 3.0 + overflow / 40px;
@@ -79,6 +85,7 @@ slint::slint! {
         }
     }
 
+    // Main window: status row, card (now playing or settings), transport, volume.
     export component MainWindow inherits Window {
         in property <bool> online;
         in property <bool> playing;
@@ -95,6 +102,7 @@ slint::slint! {
         in property <string> version;
         in-out property <string> theme-mode: "auto";
         in-out property <string> offline-tray: "gray";
+        // window/card alpha in percent
         in-out property <float> opacity-pct: 100;
         callback set-opacity(float);
         callback set-theme(string);
@@ -112,10 +120,13 @@ slint::slint! {
         min-height: 470px;
         preferred-width: 360px;
         preferred-height: 520px;
+        // semi-transparent window background (needs a compositor)
         background: (dark ? #14161b : #f3f4f7).with-alpha(opacity-pct / 100);
+        // keep std-widgets (Slider, LineEdit, Button) in the same color scheme
         changed dark => { Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light; }
         init => { Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light; }
 
+        // theme colors
         property <color> fg: dark ? #f2f3f5 : #14161b;
         property <color> sub: dark ? #9aa0ab : #5d6470;
         property <color> card: (dark ? #1f222a : #ffffff).with-alpha(opacity-pct / 100);
@@ -125,6 +136,7 @@ slint::slint! {
             padding: 20px;
             spacing: 16px;
 
+            // status row: connection dot, text, settings gear
             HorizontalLayout {
                 spacing: 8px;
                 Rectangle {
@@ -149,6 +161,7 @@ slint::slint! {
                 }
             }
 
+            // now-playing card
             if !settings-open: Rectangle {
                 background: card;
                 border-radius: 16px;
@@ -157,6 +170,7 @@ slint::slint! {
                     padding: 20px;
                     spacing: 6px;
                     alignment: center;
+                    // cover art: rounded like the card, clipped to the rounded rectangle
                     if has-art: HorizontalLayout {
                         alignment: center;
                         padding-bottom: 10px;
@@ -174,6 +188,7 @@ slint::slint! {
                 }
             }
 
+            // settings card (replaces the now-playing card)
             if settings-open: Rectangle {
                 background: card;
                 border-radius: 16px;
@@ -225,7 +240,9 @@ slint::slint! {
                             clicked => { set-offline-tray(t); }
                         }
                     }
+                    // push the footer to the bottom
                     Rectangle { vertical-stretch: 1; }
+                    // footer: copyright + repo link
                     Text { text: "© Birk Bremer"; color: sub; font-size: 12px; horizontal-alignment: center; }
                     Text {
                         text: "github.com/bdynamic/volumio-remote";
@@ -243,6 +260,7 @@ slint::slint! {
             HorizontalLayout {
                 alignment: center;
                 spacing: 18px;
+                // transport row: previous, play/pause, next
                 RoundButton {
                     size: 46px;
                     fill: dark ? #2b2f39 : #dfe2e8;
@@ -297,6 +315,8 @@ slint::slint! {
 }
 
 /// Dark if the Cinnamon/GNOME GTK theme name contains "dark"; default dark.
+/// Resolve the theme setting to dark (true) / light (false).
+/// "auto" asks gsettings for the GTK theme name; no answer = dark.
 fn detect_dark(theme: &str) -> bool {
     match theme {
         "dark" => true,
@@ -312,6 +332,7 @@ fn detect_dark(theme: &str) -> bool {
     }
 }
 
+/// Push a state snapshot into the window (UI thread only).
 fn apply(w: &MainWindow, s: &Option<Info>) {
     w.set_online(s.is_some());
     let i = s.clone().unwrap_or_default();
@@ -320,6 +341,7 @@ fn apply(w: &MainWindow, s: &Option<Info>) {
     w.set_artist_text(i.artist.into());
     w.set_album_text(i.album.into());
     w.set_muted(i.mute);
+    // keep the slider where it is while offline
     if s.is_some() {
         w.set_volume(i.volume as f32);
     }
@@ -355,11 +377,13 @@ fn fetch_art(host: String, art: String, weak: slint::Weak<MainWindow>, current: 
     });
 }
 
+/// Owns the Slint window and wires its callbacks to `Core`.
 pub struct Ui {
     win: MainWindow,
 }
 
 impl Ui {
+    /// Build the window, load initial values and connect all callbacks.
     pub fn new(core: Arc<Core>) -> Ui {
         let win = MainWindow::new().expect("create window");
         win.set_dark(detect_dark(&core.cfg.lock().unwrap().theme));
@@ -374,6 +398,7 @@ impl Ui {
         apply(&win, &core.snapshot());
 
         let c = core.clone();
+        // transport + volume callbacks -> Volumio commands
         win.on_toggle(move || c.toggle());
         let c = core.clone();
         win.on_prev(move || c.run_cmd(Cmd::Prev));
@@ -387,6 +412,7 @@ impl Ui {
             c.run_cmd(Cmd::Mute(!muted));
         });
         let (c, w) = (core.clone(), win.as_weak());
+        // settings callbacks: persist, then update the window right away
         win.on_set_theme(move |t| {
             c.set_option("theme", &t);
             if let Some(w) = w.upgrade() {
@@ -404,6 +430,7 @@ impl Ui {
             }
         });
         let c = core.clone();
+        // open links in the default browser
         win.on_open_url(|u| {
             let _ = std::process::Command::new("xdg-open").arg(u.as_str()).spawn();
         });
@@ -412,6 +439,8 @@ impl Ui {
         let weak = win.as_weak();
         let last_art = Arc::new(Mutex::new(String::new()));
         let c = core.clone();
+        // Core -> window: refetch cover art only when its URL changed,
+        // then apply the state on the UI thread (listeners run on other threads).
         core.on_change(move |s| {
             let art = s.as_ref().map(|i| i.albumart.clone()).unwrap_or_default();
             let changed = std::mem::replace(&mut *last_art.lock().unwrap(), art.clone()) != art;
@@ -442,6 +471,8 @@ impl Ui {
         })
     }
 
+    /// Run the event loop; `show` opens the window at start (else tray only).
+    /// Closing the window only hides it, the loop keeps running.
     pub fn run(&self, show: bool) {
         if show {
             let _ = self.win.show();

@@ -9,9 +9,11 @@ use std::sync::Arc;
 use zbus::zvariant::{ObjectPath, Value};
 use zbus::{connection, Connection};
 
+/// bus name and object path required by the MPRIS2 spec
 const NAME: &str = "org.mpris.MediaPlayer2.volumio_remote";
 const PATH: &str = "/org/mpris/MediaPlayer2";
 
+/// `org.mpris.MediaPlayer2`: app-level interface (raise/quit, identity).
 struct Root {
     show: ShowFn,
 }
@@ -21,6 +23,7 @@ impl Root {
     fn raise(&self) {
         (self.show)();
     }
+    /// quitting through MPRIS is not supported (`can_quit` = false)
     fn quit(&self) {}
     #[zbus(property)]
     fn can_quit(&self) -> bool {
@@ -52,10 +55,12 @@ impl Root {
     }
 }
 
+/// `org.mpris.MediaPlayer2.Player`: transport + metadata, forwarded to Volumio.
 struct Player {
     core: Arc<Core>,
 }
 
+/// Map Volumio status to the MPRIS `PlaybackStatus` string.
 fn status_of(i: &Option<Info>) -> &'static str {
     match i {
         Some(i) if i.playing() => "Playing",
@@ -84,6 +89,7 @@ impl Player {
     fn play(&self) {
         self.core.run_cmd(Cmd::Play);
     }
+    /// seek/position/URI are not supported by this remote
     fn seek(&self, _offset: i64) {}
     fn set_position(&self, _track: ObjectPath<'_>, _pos: i64) {}
     fn open_uri(&self, _uri: String) {}
@@ -92,6 +98,7 @@ impl Player {
     fn playback_status(&self) -> String {
         status_of(&self.core.snapshot()).into()
     }
+    /// loop, rate and shuffle are fixed values; setters are no-ops
     #[zbus(property)]
     fn loop_status(&self) -> String {
         "None".into()
@@ -110,6 +117,7 @@ impl Player {
     }
     #[zbus(property)]
     fn set_shuffle(&self, _v: bool) {}
+    /// Track metadata; cover art is not exported yet (F-29).
     #[zbus(property)]
     fn metadata(&self) -> HashMap<String, Value<'static>> {
         let mut m: HashMap<String, Value<'static>> = HashMap::new();
@@ -129,6 +137,7 @@ impl Player {
     fn set_volume(&self, v: f64) {
         self.core.run_cmd(Cmd::Volume((v.clamp(0.0, 1.0) * 100.0).round() as u8));
     }
+    /// position is not tracked
     #[zbus(property)]
     fn position(&self) -> i64 {
         0
@@ -141,6 +150,7 @@ impl Player {
     fn maximum_rate(&self) -> f64 {
         1.0
     }
+    /// capability flags: transport controls yes, seeking no
     #[zbus(property)]
     fn can_go_next(&self) -> bool {
         true
@@ -167,6 +177,7 @@ impl Player {
     }
 }
 
+/// Own the bus name and export both interfaces on the session bus.
 async fn connect(core: &Arc<Core>, show: &ShowFn) -> zbus::Result<Connection> {
     connection::Builder::session()?
         .name(NAME)?
@@ -176,6 +187,7 @@ async fn connect(core: &Arc<Core>, show: &ShowFn) -> zbus::Result<Connection> {
         .await
 }
 
+/// Emit PropertiesChanged so clients (playerctl, panel applets) refresh.
 async fn notify(conn: &Connection) -> zbus::Result<()> {
     let r = conn.object_server().interface::<_, Player>(PATH).await?;
     let p = r.get().await;
@@ -186,7 +198,10 @@ async fn notify(conn: &Connection) -> zbus::Result<()> {
     Ok(())
 }
 
+/// Run the MPRIS service in its own thread with a small tokio runtime.
+/// It is registered only while Volumio is online and dropped when offline.
 pub fn spawn(core: Arc<Core>, show: ShowFn) {
+    // listener (any thread) -> async loop: online/offline flag per state change
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<bool>();
     core.on_change(move |s| {
         let _ = tx.send(s.is_some());
@@ -195,6 +210,7 @@ pub fn spawn(core: Arc<Core>, show: ShowFn) {
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("tokio runtime");
         rt.block_on(async move {
+            // `Some` = registered on the bus
             let mut conn: Option<Connection> = None;
             let mut online = initial;
             loop {
@@ -213,6 +229,7 @@ pub fn spawn(core: Arc<Core>, show: ShowFn) {
                         eprintln!("volumio-remote: MPRIS notify: {e}");
                     }
                 }
+                // wait for next state change; channel closed = shut down
                 match rx.recv().await {
                     Some(o) => online = o,
                     None => return,

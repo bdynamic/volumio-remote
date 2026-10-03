@@ -6,42 +6,54 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+/// Called on every state change; `None` = Volumio offline.
 type Listener = Box<dyn Fn(&Option<Info>) + Send + Sync>;
 
+/// Shared app state, used by UI, tray, MPRIS and sink threads.
 pub struct Core {
+    /// current settings (also persisted via `config::save`)
     pub cfg: Mutex<Config>,
+    /// last known Volumio state; `None` = offline
     pub state: Mutex<Option<Info>>,
+    /// UI/tray/MPRIS/sink register here via `on_change`
     listeners: Mutex<Vec<Listener>>,
     /// Bumped per command: a state fetched before a command is stale and dropped.
     cmd_seq: AtomicU64,
 }
 
 impl Core {
+    /// Create core with empty state (offline until the first `refresh`).
     pub fn new(cfg: Config) -> Arc<Core> {
         Arc::new(Core { cfg: Mutex::new(cfg), state: Mutex::new(None), listeners: Mutex::new(vec![]), cmd_seq: AtomicU64::new(0) })
     }
 
+    /// Register a listener. It runs on whichever thread triggers the change.
     pub fn on_change(&self, f: impl Fn(&Option<Info>) + Send + Sync + 'static) {
         self.listeners.lock().unwrap().push(Box::new(f));
     }
 
+    /// Current Volumio host (cloned out of the lock).
     pub fn host(&self) -> String {
         self.cfg.lock().unwrap().host.clone()
     }
 
+    /// Copy of the last known state.
     pub fn snapshot(&self) -> Option<Info> {
         self.state.lock().unwrap().clone()
     }
 
     /// Fetch state; notify listeners when it changed (online/offline included).
     pub fn refresh(&self) {
+        // remember command counter before the (slow) HTTP request
         let seq = self.cmd_seq.load(Ordering::SeqCst);
         let new = volumio::get_state(&self.host()).ok();
+        // a command ran meanwhile: reply is stale, drop it
         if self.cmd_seq.load(Ordering::SeqCst) != seq {
             return;
         }
         {
             let mut cur = self.state.lock().unwrap();
+            // unchanged: do not wake listeners
             if *cur == new {
                 return;
             }
@@ -64,12 +76,15 @@ impl Core {
         });
     }
 
+    /// Play/pause toggle.
     pub fn toggle(self: &Arc<Self>) {
         self.run_cmd(Cmd::Toggle);
     }
 
+    /// Normalize + persist a new host, then refresh in the background.
     pub fn set_host(self: &Arc<Self>, host: &str) {
         let host = host.trim().trim_start_matches("http://").trim_end_matches('/');
+        // ignore empty input
         if host.is_empty() {
             return;
         }
@@ -106,6 +121,7 @@ impl Core {
         }
     }
 
+    /// Poll Volumio every 2 s in a background thread (no push channel is used).
     pub fn start_polling(self: &Arc<Self>) {
         let core = self.clone();
         std::thread::spawn(move || loop {

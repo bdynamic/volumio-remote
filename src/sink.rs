@@ -10,6 +10,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 use std::time::Duration;
 
+/// Name of the virtual null sink the user selects as default output.
 pub const SINK: &str = "volumio_remote";
 
 /// Time of the last sink event (ms since first use). Volumio -> sink sync pauses
@@ -17,22 +18,26 @@ pub const SINK: &str = "volumio_remote";
 static LAST_KNOB_MS: AtomicU64 = AtomicU64::new(0);
 static T0: OnceLock<Instant> = OnceLock::new();
 
+/// Monotonic ms; offset 10 s so the initial 0 in `LAST_KNOB_MS` counts as "long ago".
 fn now_ms() -> u64 {
     T0.get_or_init(Instant::now).elapsed().as_millis() as u64 + 10_000
 }
 
+/// Run `pactl`, return stdout on success.
 fn pactl(args: &[&str]) -> Option<String> {
     // pactl output is localized ("Stumm: ja"): force C locale for parsing.
     let o = Command::new("pactl").args(args).env("LC_ALL", "C").env("LANGUAGE", "C").output().ok()?;
     o.status.success().then(|| String::from_utf8_lossy(&o.stdout).into_owned())
 }
 
+/// True if `pactl` works (PulseAudio or PipeWire-pulse running).
 pub fn available() -> bool {
     pactl(&["info"]).is_some()
 }
 
-/// Creates the sink if missing.
+/// Creates the sink if missing; false if it could not be created.
 fn ensure() -> bool {
+    // already listed by name (column 2 of `list short sinks`)?
     if pactl(&["list", "short", "sinks"]).is_some_and(|s| s.lines().any(|l| l.split_whitespace().nth(1) == Some(SINK))) {
         return true;
     }
@@ -45,6 +50,7 @@ fn ensure() -> bool {
     .is_some()
 }
 
+/// Make the virtual sink the default output (tray menu entry).
 pub fn set_default() {
     pactl(&["set-default-sink", SINK]);
 }
@@ -54,6 +60,7 @@ pub fn parse_volume(out: &str) -> Option<u8> {
     out.split_whitespace().find_map(|t| t.strip_suffix('%')?.parse::<u32>().ok()).map(|v| v.min(100) as u8)
 }
 
+/// Parse `Mute: yes|no` from `pactl get-sink-mute` (C locale).
 pub fn parse_mute(out: &str) -> Option<bool> {
     match out.split(':').nth(1)?.trim() {
         "yes" => Some(true),
@@ -63,6 +70,7 @@ pub fn parse_mute(out: &str) -> Option<bool> {
 }
 
 /// Language independent: `pactl --format=json list sinks` (PulseAudio/PipeWire >= 16).
+/// Volume (percent of first channel) and mute of our sink from the JSON listing.
 pub fn parse_sink_json(text: &str) -> Option<(u8, bool)> {
     let v: serde_json::Value = serde_json::from_str(text).ok()?;
     let sink = v.as_array()?.iter().find(|s| s["name"] == SINK)?;
@@ -70,6 +78,7 @@ pub fn parse_sink_json(text: &str) -> Option<(u8, bool)> {
     Some((pct.trim_end_matches('%').parse::<u32>().ok()?.min(100) as u8, sink["mute"].as_bool()?))
 }
 
+/// Current (volume, mute) of the virtual sink, JSON first, text as fallback.
 fn read_sink() -> Option<(u8, bool)> {
     if let Some(r) = pactl(&["--format=json", "list", "sinks"]).and_then(|t| parse_sink_json(&t)) {
         return Some(r);
@@ -80,6 +89,7 @@ fn read_sink() -> Option<(u8, bool)> {
     Some((vol, mute))
 }
 
+/// Verbose logging when env `VR_DEBUG` is set.
 fn debug() -> bool {
     std::env::var_os("VR_DEBUG").is_some()
 }
@@ -116,6 +126,7 @@ pub fn diagnose() {
     }
 }
 
+/// Start both sync directions between the virtual sink and Volumio.
 pub fn start(core: Arc<Core>) {
     if !available() || !ensure() {
         eprintln!("volumio-remote: pactl/sink unavailable, volume knob disabled");
@@ -123,6 +134,7 @@ pub fn start(core: Arc<Core>) {
     }
     // Volumio -> sink (keeps knob position in sync; no-op when equal).
     // Also run once now: a new sink starts at 100%, so the knob could not go up.
+    // pause while the knob moves, set sink volume only if it differs
     fn sync(s: &Option<crate::volumio::Info>) {
         if now_ms().saturating_sub(LAST_KNOB_MS.load(Ordering::SeqCst)) < 1500 {
             return;
@@ -133,9 +145,11 @@ pub fn start(core: Arc<Core>) {
             }
         }
     }
+    // listener runs on every Volumio state change
     core.on_change(sync);
     sync(&core.snapshot());
-    // sink -> Volumio
+    // sink -> Volumio: react to every sink event from `pactl subscribe`
+    // reconnect loop: `pactl subscribe` ends if the audio server restarts
     std::thread::spawn(move || loop {
         // C locale: event lines are translated otherwise ("auf Sink #"), the filter below would miss them.
         let child = Command::new("pactl")
@@ -152,11 +166,13 @@ pub fn start(core: Arc<Core>) {
                     if !line.contains("sink #") {
                         continue;
                     }
+                    // remember knob activity so `sync` pauses
                     LAST_KNOB_MS.store(now_ms(), Ordering::SeqCst);
                     let (Some((vol, mute)), Some(info)) = (read_sink(), core.snapshot()) else { continue };
                     if debug() {
                         eprintln!("volumio-remote: sink vol={vol} mute={mute}, volumio vol={} mute={}", info.volume, info.mute);
                     }
+                    // forward mute and volume changes; volume ignored while muted
                     if mute != info.mute {
                         core.run_cmd(Cmd::Mute(mute));
                     }
@@ -165,6 +181,7 @@ pub fn start(core: Arc<Core>) {
                     }
                 }
             }
+            // subscribe ended: reap the child, wait, then reconnect
             let _ = child.wait();
         }
         std::thread::sleep(Duration::from_secs(2));

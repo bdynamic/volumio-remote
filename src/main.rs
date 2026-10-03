@@ -13,7 +13,9 @@ use volumio::Cmd;
 
 /// CLI fallback (option C): bind to desktop shortcuts. Returns true if handled.
 fn cli(args: &[String]) -> bool {
+    // CLI mode reads the host from the config, no GUI is started
     let host = config::load().host;
+    // volume +/- `d` percent relative to the current Volumio volume
     let step = |d: i16| match volumio::get_state(&host) {
         Ok(i) => volumio::send(&host, Cmd::Volume((i.volume as i16 + d).clamp(0, 100) as u8)),
         Err(e) => Err(e),
@@ -42,7 +44,9 @@ fn cli(args: &[String]) -> bool {
     true
 }
 
+/// Entry: CLI command (then exit) or tray + window app.
 fn main() {
+    // skip program name
     let args: Vec<String> = std::env::args().skip(1).collect();
     if cli(&args) {
         return;
@@ -59,14 +63,18 @@ fn main() {
         return;
     }
 
+    // no config file yet: open the window so the host can be entered
     let first_run = !config::path().exists();
     let core = core::Core::new(config::load());
     let ui = ui::Ui::new(core.clone());
+    // thread-safe "show window" callback for tray and MPRIS
     let show = ui.show_fn();
+    // start background workers: polling, tray, MPRIS, volume-knob sink
     core.start_polling();
     tray::spawn(core.clone(), show.clone());
     mpris::spawn(core.clone(), show);
     sink::start(core.clone());
+    // blocks in the Slint event loop until quit
     ui.run(first_run || args.iter().any(|a| a == "--show"));
     drop(lock);
 }
