@@ -7,6 +7,7 @@ NAME=volumio-remote
 BIN_DIR="${HOME}/.local/bin"
 AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/$NAME.log"
 cd "$(dirname "$(readlink -f "$0")")"
 
 pull=1; start=1
@@ -21,7 +22,7 @@ done
 # 1. pull
 if [ "$pull" = 1 ] && git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
   echo "==> git pull"
-  git pull --ff-only
+  git pull --ff-only || echo "warn: git pull failed, building local sources" >&2
 else
   echo "==> skip git pull (disabled or no upstream)"
 fi
@@ -43,16 +44,17 @@ cargo build --release
 
 # 4. install
 echo "==> install to $BIN_DIR/$NAME"
-mkdir -p "$BIN_DIR" "$AUTOSTART_DIR" "$APPS_DIR"
+mkdir -p "$BIN_DIR" "$AUTOSTART_DIR" "$APPS_DIR" "$(dirname "$LOG")"
 install -m 755 "target/release/$NAME" "$BIN_DIR/$NAME.new"
 mv -f "$BIN_DIR/$NAME.new" "$BIN_DIR/$NAME"   # atomic, works while running
 
+# Autostart entry logs stderr (panics, tray/MPRIS errors) to $LOG
 cat > "$AUTOSTART_DIR/$NAME.desktop" <<DESK
 [Desktop Entry]
 Type=Application
 Name=Volumio Remote
 Comment=Remote control for Volumio
-Exec=$BIN_DIR/$NAME
+Exec=sh -c "exec $BIN_DIR/$NAME >>$LOG 2>&1"
 Icon=multimedia-player
 Terminal=false
 Categories=AudioVideo;Audio;
@@ -65,7 +67,7 @@ echo "==> autostart: $AUTOSTART_DIR/$NAME.desktop"
 if [ "$start" = 1 ]; then
   pkill -f "^$BIN_DIR/$NAME\$" 2>/dev/null && sleep 1 || true
   echo "==> start $NAME"
-  nohup setsid "$BIN_DIR/$NAME" >/dev/null 2>&1 &
+  nohup setsid "$BIN_DIR/$NAME" >>"$LOG" 2>&1 &
   sleep 1
-  pgrep -f "^$BIN_DIR/$NAME\$" >/dev/null && echo "running" || { echo "failed to start" >&2; exit 1; }
+  pgrep -f "^$BIN_DIR/$NAME\$" >/dev/null && echo "running (log: $LOG)" || { echo "failed to start, see $LOG" >&2; tail -5 "$LOG" >&2; exit 1; }
 fi
