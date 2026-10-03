@@ -2,7 +2,7 @@
 
 Source: https://github.com/majko96/VolumioApp (`mainwindow.cpp`, `settingsui.cpp`).
 Priority: M = must (parity with original), S = should, C = could (not in original).
-Status: all open.
+Status: see Implementation status below.
 
 ## Functional
 
@@ -42,6 +42,29 @@ Status: all open.
 | F-33 | M | Online again: restore icon, controls, MPRIS, resume polling without restart | new |
 | F-34 | S | Setting: offline tray behavior `gray` (default) / `hide` | new |
 | F-29 | C | Album art in MPRIS `mpris:artUrl` | new |
+
+## Implementation status
+
+Tested in container (Xvfb + private D-Bus) against a real Volumio; screenshots checked.
+
+| Req | Status | Note |
+|---|---|---|
+| F-01..07, F-09, F-10 | done, tested | Slint window, 2 s poll |
+| F-08, F-30 | done | availability = `getState` success (timeout 2 s), not `ping` |
+| F-11 | done | `~/.config/volumio-remote/config` (`host`, `offline_tray`, `theme`) |
+| F-12, F-13 | done, **untested** | `ksni` tray; container has no StatusNotifierWatcher. Window close hides it. |
+| F-14 | open | window geometry not persisted |
+| F-15 | done | mute button; Volumio `mute`/`unmute` unverified on device |
+| F-16 | open | arrow keys not bound |
+| F-21, F-22 | done | Slint UI; dark/light via `gsettings gtk-theme` or `theme=` |
+| F-23..F-27 | done, tested | MPRIS via `zbus`; `playerctl` shows metadata/status/volume |
+| F-28 | done, **untested** | `sink.rs`; needs `pactl` (absent in container). Tray item "Use as default output" |
+| F-31 | done (window, MPRIS tested); tray icon untested | |
+| F-32 | done, tested | MPRIS name released offline, re-registered online |
+| F-33 | done | |
+| F-34 | done, untested | `offline_tray=hide` -> SNI status Passive |
+| Fallback C | done | `--toggle --next --prev --vol-up --vol-down --mute` |
+| F-17..F-20, F-29 | open | |
 
 ## Non-functional
 

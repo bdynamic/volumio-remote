@@ -11,3 +11,9 @@
 
 Install is atomic (`mv` over running binary). Instance match: `pgrep -f ^<path>$` (works with procps and busybox).
 Tested in container with temp `$HOME`: build, install, restart, single instance.
+
+## Container notes
+
+- `.cargo/config.toml` links the musl target dynamically (`-crt-static`); static fontconfig fails.
+- Extra apk packages for headless tests: `xvfb dbus playerctl xwd imagemagick libx11 libxcursor libxi libxrandr libxkbcommon libxcb font-dejavu`.
+- Test run: `Xvfb :99`, `dbus-run-session`, `XDG_CONFIG_HOME` pointing to a config with a test host, `playerctl` for MPRIS, `xwd` + `magick` for screenshots.
