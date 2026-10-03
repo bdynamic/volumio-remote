@@ -3,11 +3,11 @@
 | Step | What |
 |---|---|
 | Toolchain | rustup stable (`~/.cargo`). Container: Alpine/musl, host: Mint/glibc -> **build on host** with `install.sh` |
-| `./install.sh` | `git pull --ff-only` (if upstream), `cargo build --release`, install to `~/.local/bin/volumio-remote`, write autostart + app `.desktop`, kill old instance, start new |
+| `./install.sh` | `git pull --ff-only` (if upstream; failure is a warning), remove legacy `volumiox` files, `cargo build --release`, install to `~/.local/bin/volumio-remote`, write autostart + app `.desktop`, kill old instance, start new |
 | Log | `~/.cache/volumio-remote.log` (stderr of app started by install.sh and by autostart) |
 | Flags | `--no-pull`, `--no-start` |
 | Autostart | `~/.config/autostart/volumio-remote.desktop` |
-| Host deps (Debian/Mint) | `sudo apt install build-essential pkg-config libfontconfig1-dev libxkbcommon-dev libxcb1-dev` (Slint; list to be verified) |
+| Host deps (Debian/Mint) | `sudo apt install build-essential pkg-config libfontconfig1-dev libxkbcommon-dev libxcb1-dev` (verified on the target Mint system) |
 | Container deps (apk) | `build-base fontconfig-dev freetype-dev libxkbcommon-dev libxcb-dev pkgconf` |
 
 Install is atomic (`mv` over running binary). Instance match: `pgrep -f ^<path>$` (works with procps and busybox).

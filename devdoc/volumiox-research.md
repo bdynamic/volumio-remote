@@ -1,4 +1,6 @@
-# VolumioX research
+# VolumioX research (the original app)
+
+Our app is named `volumio-remote`; see [requirements.md](requirements.md).
 
 Desktop app to control a remote Volumio instance (Linux/Windows/macOS).
 

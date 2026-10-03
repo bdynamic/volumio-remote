@@ -1,139 +1,94 @@
-# Requirements (derived from VolumioApp / VolumioX)
+# Requirements
 
-Source: https://github.com/majko96/VolumioApp (`mainwindow.cpp`, `settingsui.cpp`).
-Priority: M = must (parity with original), S = should, C = could (not in original).
-Status: see Implementation status below.
+Origin: reimplementation of VolumioX (https://github.com/majko96/VolumioApp, Qt/C++) with a modern UI, OS media integration and volume knob support. Findings about the original: [volumiox-research.md](volumiox-research.md).
+
+Priority: M = must, S = should, C = could. Status values: **done** = implemented and verified by the user on Cinnamon/X11 (2026-10-03); **done (container)** = verified only in the Alpine test container; **open** = not implemented.
 
 ## Functional
 
-| ID | Pri | Requirement | Original behavior |
+| ID | Pri | Requirement | Status |
 |---|---|---|---|
-| F-01 | M | Show current track title and artist | from `getState`; scrolling text widget for long titles |
-| F-02 | M | Show current volume (%) | from `getState` |
-| F-03 | M | Show play state (play/pause icon) | icon toggles with state |
-| F-04 | M | Play/pause toggle button | `cmd=toggle` |
-| F-05 | M | Previous track button | `cmd=prev` |
-| F-06 | M | Next track button | `cmd=next` |
-| F-07 | M | Volume slider 0-100 | `cmd=volume&volume=<n>` |
-| F-08 | M | Show device online/offline indicator | `ping` response -> ON/OFF |
-| F-09 | M | Poll state periodically, update UI | 500 ms |
-| F-10 | M | Settings dialog with one field: Volumio host/IP | no `http://` prefix |
-| F-11 | M | Persist host between runs | `~/.volumiox/data.txt`, plain text |
-| F-12 | M | System tray icon with Show / Hide / Exit menu | yes |
-| F-13 | M | Minimize to tray; tray click restores window | yes |
-| F-14 | M | Persist window geometry/state | `QSettings` |
-| F-15 | S | Mute / unmute | in forum description, not seen in code |
-| F-16 | S | Volume +/- via arrow keys (step 1) | in forum description |
-| F-17 | C | Seek/progress bar | absent in original |
-| F-18 | C | Album art | absent in original |
-| F-19 | C | Visible error message on failed request | absent in original |
-| F-20 | C | Validate host input | absent in original |
-| F-21 | M | Modern UI, same functions as F-01..F-16 | new (original: dated Qt Widgets look) |
-| F-22 | M | UI follows system light/dark theme | new |
-| F-23 | M | Register as media player on OS (Linux: MPRIS2 over D-Bus, name `org.mpris.MediaPlayer2.volumio_remote`) | new |
-| F-24 | M | MPRIS methods `Play`, `Pause`, `PlayPause`, `Stop`, `Next`, `Previous` -> Volumio commands | new |
-| F-25 | M | MPRIS properties `PlaybackStatus`, `Metadata` (title, artist, album) kept in sync with Volumio state | new |
-| F-26 | M | Keyboard media keys (play/pause/next/prev) control Volumio via F-23/24 | new; desktop routes keys to MPRIS player |
-| F-27 | S | MPRIS `Volume` property get/set <-> Volumio volume (works with `playerctl volume`) | new |
-| F-28 | S | Keyboard volume knob/keys control Volumio volume (see Feasibility) | new |
-| F-30 | M | Check Volumio availability periodically (`/api/v1/ping`, interval 2-5 s, timeout <= 2 s) | extends F-08 |
-| F-31 | M | Offline: tray icon grayed out (user-switchable to hidden); UI controls disabled, show "offline" | new |
-| F-32 | M | Offline: unregister MPRIS service so media keys go to other players; re-register when online | new |
-| F-33 | M | Online again: restore icon, controls, MPRIS, resume polling without restart | new |
-| F-34 | S | Setting: offline tray behavior `gray` (default) / `hide` | new |
-| F-35 | M | Settings panel (⚙) replaces the cover card; contains host, theme, offline tray behavior; never clipped by window size | new; earlier inline row was cut off at the window bottom |
-| F-36 | M | Theme switch in settings: Auto / Dark / Light, persisted (`theme=`), applied live; Auto follows GTK theme name (`gsettings`), default dark | new |
-| F-37 | M | Offline tray behavior switch in settings (Grayed out / Hidden), persisted, applied live | implements F-34 UI |
-| F-38 | M | Volume sink is synced to Volumio volume at start and on every change, so knob starts at the real volume | fix: new sink started at 100% and knob-up did nothing |
-| F-39 | S | Window opacity 30..100 % slider in settings, live, persisted (`opacity=`); implemented as alpha on window/card background (needs compositor, Cinnamon has one) | new |
-| F-41 | M | While the knob is turned (sink events within 1.5 s), Volumio -> sink sync pauses so intermediate Volumio values cannot move the sink back | fix for fast knob turns |
-| F-43 | M | Locale independent: all `pactl` calls run with `LC_ALL=C`; sink state is read from `pactl --format=json` (text parse only as fallback); event filter matches `sink #` (not translated words) | root cause of dead knob on the user's (German) system: diagnose worked, app ignored translated event lines |
-| F-42 | M | App stderr (panics, tray/MPRIS errors) is logged to `~/.cache/volumio-remote.log` for autostart and `install.sh` starts; failed `git pull` does not abort install | support: app instances were found dead on the user machine |
-| F-40 | S | `--diagnose-knob`: prints default sink, sink list, `volumio_remote` volume; for 15 s each sink event is forwarded like the app does (compare with Volumio, send `Volume(n)`, re-read) and the result printed | support for F-28 |
-| F-29 | C | Album art in MPRIS `mpris:artUrl` | new |
-
-## Implementation status
-
-Tested in container (Xvfb + private D-Bus) against a real Volumio; screenshots checked.
-
-| Req | Status | Note |
-|---|---|---|
-| F-01..07, F-09, F-10 | done, tested | Slint window, 2 s poll |
-| F-08, F-30 | done | availability = `getState` success (timeout 2 s), not `ping` |
-| F-11 | done | `~/.config/volumio-remote/config` (`host`, `offline_tray`, `theme`) |
-| F-12, F-13 | done, **untested** | `ksni` tray; container has no StatusNotifierWatcher. Window close hides it. |
-| F-14 | open | window geometry not persisted |
-| F-15 | done | mute button; Volumio `mute`/`unmute` unverified on device |
-| F-16 | open | arrow keys not bound |
-| F-21, F-22 | done, tested | Slint UI; dark and light designs |
-| F-23..F-27 | done, tested | MPRIS via `zbus`; `playerctl` shows metadata/status/volume |
-| F-28 | done; forward path tested with PulseAudio in container, not on Cinnamon | `sink.rs`; pactl forced to `LC_ALL=C` (localized `Mute:` line made the handler skip every event); stale poll results dropped after commands; `VR_DEBUG=1` logs sink/Volumio volumes; needs `pactl` (absent in container). Tray item "Use as default output" |
-| F-31 | done (window, MPRIS tested); tray icon untested | |
-| F-32 | done, tested | MPRIS name released offline, re-registered online |
-| F-33 | done | |
-| F-34, F-37 | done; UI tested, tray effect untested | settings switch, `offline_tray=hide` -> SNI status Passive, applied live |
-| F-39 | done; ARGB window (X11 depth 32) verified in container, translucency itself untested (no compositor) | |
-| F-40 | done; user run on Cinnamon: default sink OK, sink events arrive (35..60 %) | |
-| F-41 | done, tested with rapid steps in container | | |
-| F-35, F-36 | done, tested | screenshots dark + light, config persisted |
-| F-38 | done, tested | real PulseAudio + fake Volumio in container: sink starts at Volumio volume, knob steps and mute reach Volumio |
-| Fallback C | done | `--toggle --next --prev --vol-up --vol-down --mute` |
-| F-18 | done, tested | cover from `getState.albumart` (`/albumart?...` on the Volumio host, or absolute URL); fetched off-thread, decoded with `image` |
-| F-17, F-19, F-20, F-29 | open | |
+| F-01 | M | Show current track title, artist, album | done |
+| F-02 | M | Show current volume (%) | done |
+| F-03 | M | Show play state (play/pause icon) | done |
+| F-04 | M | Play/pause toggle button | done |
+| F-05 | M | Previous track button | done |
+| F-06 | M | Next track button | done |
+| F-07 | M | Volume slider 0-100 | done |
+| F-08 | M | Online/offline indicator in the window | done |
+| F-09 | M | Poll Volumio state every 2 s and update UI | done |
+| F-10 | M | Settings: Volumio host/IP (no `http://` needed) | done |
+| F-11 | M | Persist settings in `~/.config/volumio-remote/config` (`host`, `offline_tray`, `theme`, `opacity`) | done |
+| F-12 | M | Tray icon (StatusNotifierItem) with Play/Pause, Previous, Next, Show window, Use as default output, Quit | done |
+| F-13 | M | Closing the window hides it; tray click shows it | done |
+| F-14 | C | Persist window geometry | open |
+| F-15 | S | Mute / unmute button | done |
+| F-16 | C | Volume +/- via arrow keys in the window | open |
+| F-17 | C | Seek/progress bar | open |
+| F-18 | S | Cover art in the window, from `getState.albumart` (path on the Volumio host, or absolute URL); loaded in a background thread | done (container) |
+| F-19 | C | Visible error message for failed requests | open |
+| F-20 | C | Validate host input | open |
+| F-21 | M | Modern UI (Slint), same functions as the original | done |
+| F-22 | M | Dark and bright design | done |
+| F-23 | M | Register as MPRIS2 media player (`org.mpris.MediaPlayer2.volumio_remote`) | done |
+| F-24 | M | MPRIS `Play`, `Pause`, `PlayPause`, `Stop`, `Next`, `Previous` control Volumio | done |
+| F-25 | M | MPRIS `PlaybackStatus` and `Metadata` (title, artist, album) follow Volumio | done |
+| F-26 | M | Keyboard media keys control Volumio through MPRIS | done |
+| F-27 | S | MPRIS `Volume` get/set maps to Volumio volume (`playerctl volume`) | done (container) |
+| F-28 | S | Keyboard volume knob controls Volumio volume (virtual sink `volumio_remote`, option A) | done |
+| F-29 | C | Cover art in MPRIS `mpris:artUrl` | open |
+| F-30 | M | Detect availability: a failed `getState` (timeout 2 s) means offline | done |
+| F-31 | M | Offline: tray icon grayed out or hidden, window controls disabled, "Volumio offline" shown | done |
+| F-32 | M | Offline: release the MPRIS name so media keys go to other players; register again when online | done (container) |
+| F-33 | M | Online again: restore everything without restart | done |
+| F-34 | S | Offline tray behavior `gray` (default) or `hide` | done |
+| F-35 | M | Settings panel (gear) replaces the cover card, so it is never clipped | done |
+| F-36 | M | Theme switch Auto / Dark / Light in settings, applied live; Auto follows the GTK theme name, default dark | done |
+| F-37 | M | Offline tray behavior switch in settings, applied live | done |
+| F-38 | M | Sink volume is synced to Volumio at start and on every change | done |
+| F-39 | S | Window opacity slider 30-100 % in settings (alpha on window/card background; needs a compositor) | done |
+| F-40 | S | `--diagnose-knob`: prints default sink, sink list and volume; for 15 s forwards each sink event to Volumio and prints the result | done |
+| F-41 | M | While the knob is turned (sink events within 1.5 s) Volumio-to-sink sync pauses | done (container) |
+| F-42 | M | Stderr is logged to `~/.cache/volumio-remote.log` for autostart and `install.sh` starts | done |
+| F-43 | M | Language independent: `pactl` runs with `LC_ALL=C`; sink state from `pactl --format=json`; event filter matches `sink #` | done |
+| F-44 | M | CLI fallback for desktop shortcuts: `--toggle --next --prev --vol-up --vol-down --mute` | done (container) |
+| F-45 | M | Single instance (lock in `$XDG_RUNTIME_DIR`) | done |
+| F-46 | M | `install.sh`: pull, build, install, autostart, restart, remove legacy `volumiox` files | done |
 
 ## Non-functional
 
-| ID | Pri | Requirement |
-|---|---|---|
-| N-01 | M | Runs on Linux desktop |
-| N-02 | M | Small window, dark theme, frameless optional |
-| N-03 | M | No Volumio-side install; uses only HTTP REST API |
-| N-04 | M | Single-file/small implementation (POC, see CLAUDE.md) |
-| N-05 | S | Command latency < 1 s on LAN |
-| N-06 | S | UI never blocks on network (async or short timeout) |
-| N-07 | C | Cross-platform (Windows/macOS) |
-| N-08 | M | OS media integration must not need root |
-| N-09 | S | Works on GNOME, KDE; X11 and Wayland |
-| N-10 | M | Target desktop: Cinnamon on X11 (user system); tray via StatusNotifier/XApp |
-
-## Interface (Volumio REST, base `http://<host>`)
-
-| Endpoint | Use | Req |
-|---|---|---|
-| `/api/v1/ping` | online check | F-08 |
-| `/api/v1/getState` | title, artist, volume, status | F-01..03, F-09 |
-| `/api/v1/commands/?cmd=toggle` | play/pause | F-04 |
-| `/api/v1/commands/?cmd=prev` | previous | F-05 |
-| `/api/v1/commands/?cmd=next` | next | F-06 |
-| `/api/v1/commands/?cmd=volume&volume=<n>` | set volume | F-07 |
-| `/api/v1/commands/?cmd=volume&volume=mute\|unmute` | mute (unverified) | F-15 |
-
-## Feasibility: media keys and volume knob
-
-| Input | Routed by desktop to | Reaches app? | Approach |
+| ID | Pri | Requirement | Status |
 |---|---|---|---|
-| Play/Pause/Next/Prev keys | active MPRIS player (D-Bus) | Yes, if F-23 done | Register MPRIS2 service |
-| Volume knob/keys | default audio sink (PipeWire/PulseAudio), not MPRIS | No, by default | See options below |
+| N-01 | M | Runs on Linux desktop; target Cinnamon on X11 | done |
+| N-02 | M | Only the Volumio HTTP REST API; nothing to install on the Volumio side | done |
+| N-03 | M | Small POC code base, few dependencies, release binary built with size optimization | done |
+| N-04 | S | UI never blocks on the network (workers, 2 s timeout) | done |
+| N-05 | M | No root needed | done |
+| N-06 | C | GNOME/KDE, Wayland | open (untested) |
+| N-07 | C | Windows/macOS | open |
 
-Options for F-28 (decide later):
+## Interfaces
 
-| Opt | Idea | Pro | Con |
-|---|---|---|---|
-| A | Create virtual null sink "Volumio"; user selects it as default; app watches sink volume (`pactl subscribe` / `pw` API) and forwards to Volumio | Works on X11+Wayland, no root | User must pick sink as default; local audio then silent (fine: Volumio plays remotely) |
-| B | Global key grab of `XF86AudioRaiseVolume/LowerVolume/Mute` | Simple | X11 only; Wayland blocks; conflicts with desktop handler |
-| C | Desktop custom shortcut calling CLI `volumio-remote --vol-up` | Works everywhere | Manual user setup; overrides default volume keys |
-| D | Skip; use `playerctl volume` / app slider only | Zero effort | No knob support |
+Volumio REST (`http://<host>`):
 
-User system: Cinnamon, X11. MPRIS works (Cinnamon sound applet shows it). Volume keys go to default sink -> A works; B technically possible on X11 but collides with Cinnamon's key binding (rebind in Keyboard settings first).
+| Endpoint | Use |
+|---|---|
+| `/api/v1/getState` | status, title, artist, album, albumart, volume, mute |
+| `/api/v1/commands/?cmd=toggle\|play\|pause\|stop\|prev\|next` | playback |
+| `/api/v1/commands/?cmd=volume&volume=<0-100>\|mute\|unmute` | volume |
+| `<albumart path>` | cover image |
 
-**Decision: A (virtual sink), fallback C (CLI + Cinnamon shortcut).** Verify on target desktop first (spike).
+Local: D-Bus session bus (MPRIS, StatusNotifierItem), `pactl` (virtual sink), `gsettings` (theme detection, optional).
 
-## Out of scope (original)
+## Decisions
 
-Library browsing, queue/playlist editing, source selection, multi-device, auth.
+| Topic | Decision |
+|---|---|
+| Name | `volumio-remote` (the original `volumiox` name belongs to another project) |
+| Toolkit | Rust + Slint (software renderer, winit/X11); `ksni` tray, `zbus` MPRIS, `ureq` HTTP |
+| Volume knob | Option A: virtual sink watched via `pactl subscribe`; fallback C: CLI flags bound to desktop shortcuts. Rejected: B (X11 key grab, collides with the desktop), D (no knob) |
+| Availability check | `getState` instead of `ping` (one request, same result) |
 
-## Notes
+## Not yet verified on the user system
 
-- Original runs two timers: 500 ms (state/ping) and 50 ms (UI helpers). 50 ms timer not needed in a rewrite.
-- Added requirements F-21..F-29, N-08/09 on user request (modern UI, OS media device, volume knob).
-- Original has no license -> reimplement, do not copy code.
+Translucent window blending (F-39), `hide` tray mode (F-34), MPRIS name release while offline (F-32).

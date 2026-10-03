@@ -38,6 +38,11 @@ if command -v apt-get >/dev/null && ! pkg-config --exists fontconfig 2>/dev/null
   echo "  sudo apt install build-essential pkg-config libfontconfig1-dev libxkbcommon-dev libxcb1-dev" >&2
 fi
 
+# 2b. remove leftovers of the early name "volumiox" (pre-rename stub)
+OLD=volumiox
+pkill -f "^$BIN_DIR/$OLD\$" 2>/dev/null || true
+rm -f "$BIN_DIR/$OLD" "$AUTOSTART_DIR/$OLD.desktop" "$APPS_DIR/$OLD.desktop"
+
 # 3. build
 echo "==> cargo build --release"
 cargo build --release

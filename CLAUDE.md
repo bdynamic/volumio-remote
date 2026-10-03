@@ -30,3 +30,5 @@ This file provides guidance for AI Assistants
 - [Requirements](devdoc/requirements.md)
 - [Tray reference](devdoc/tray-reference.md)
 - [Build and install](devdoc/build-install.md)
+- [Architecture](devdoc/architecture.md)
+- [Volume knob](devdoc/volume-knob.md)

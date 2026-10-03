@@ -11,7 +11,7 @@ Cinnamon SNI tray in Rust, 502 lines, single file. Same desktop as target.
 
 ## Patterns to reuse
 
-| Pattern | How | Use in volumio-remote |
+| Pattern | How | Use in volumio-remote (all implemented) |
 |---|---|---|
 | Tray as struct impl `ksni::Tray` | `id`, `title`, `icon_name`, `menu` | tray with themed icon names |
 | Icon by theme name | e.g. `audio-input-microphone`, `media-record` | online: `multimedia-player`/`media-playback-*`; offline: gray variant (F-31) |
@@ -35,5 +35,5 @@ Cinnamon SNI tray in Rust, 502 lines, single file. Same desktop as target.
 
 ## Notes
 
-- Container has no `cargo`/`rustc` yet (reference binary was built elsewhere). Install rustup before build.
+- Used as the pattern for `src/tray.rs`; see [architecture.md](architecture.md).
 - Reference uses `std::thread` + blocking handle, not async runtime in app code. Keep same: simple.
