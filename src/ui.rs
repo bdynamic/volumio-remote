@@ -85,7 +85,7 @@ slint::slint! {
         callback toggle-mute();
         callback save-host(string);
 
-        title: "Volume Remote";
+        title: "Volumio Remote";
         min-width: 320px;
         min-height: 470px;
         preferred-width: 360px;
