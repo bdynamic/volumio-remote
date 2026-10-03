@@ -76,7 +76,7 @@ cargo build
 cargo test
 ```
 
-Docs are in [`devdoc/`](devdoc/): [requirements](devdoc/requirements.md), [architecture](devdoc/architecture.md), [build and install](devdoc/build-install.md), [volume knob](devdoc/volume-knob.md).
+Docs are in [`devdoc/`](devdoc/): [requirements](devdoc/requirements.md), [architecture](devdoc/architecture.md), [build and install](devdoc/build-install.md), [volume knob](devdoc/volume-knob.md), [troubleshooting](devdoc/troubleshooting.md).
 
 ## Acknowledgements
 
