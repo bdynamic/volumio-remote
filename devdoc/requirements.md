@@ -54,6 +54,8 @@ Priority: M = must, S = should, C = could. Status values: **done** = implemented
 | F-44 | M | CLI fallback for desktop shortcuts: `--toggle --next --prev --vol-up --vol-down --mute` | done (container) |
 | F-45 | M | Single instance (lock in `$XDG_RUNTIME_DIR`) | done |
 | F-46 | M | `install.sh`: pull, build, install, autostart, restart, remove legacy `volumiox` files | done |
+| F-47 | M | Version 1.0.0 (from `Cargo.toml`) shown in settings dialog | done |
+| F-48 | M | GPL-3.0-or-later license (`LICENSE`) | done |
 
 ## Non-functional
 

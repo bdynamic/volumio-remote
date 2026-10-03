@@ -71,6 +71,7 @@ slint::slint! {
         in-out property <bool> dark: true;
         in-out property <string> host;
         in-out property <bool> settings-open;
+        in property <string> version;
         in-out property <string> theme-mode: "auto";
         in-out property <string> offline-tray: "gray";
         in-out property <float> opacity-pct: 100;
@@ -178,7 +179,10 @@ slint::slint! {
                     padding: 20px;
                     spacing: 10px;
                     alignment: start;
-                    Text { text: "Settings"; color: fg; font-size: 18px; font-weight: 700; }
+                    HorizontalLayout {
+                        Text { text: "Settings"; color: fg; font-size: 18px; font-weight: 700; horizontal-stretch: 1; }
+                        Text { text: "v" + version; color: sub; font-size: 12px; vertical-alignment: center; }
+                    }
                     Text { text: "Volumio host / IP"; color: sub; font-size: 12px; }
                     HorizontalLayout {
                         spacing: 8px;
@@ -345,6 +349,7 @@ impl Ui {
         let win = MainWindow::new().expect("create window");
         win.set_dark(detect_dark(&core.cfg.lock().unwrap().theme));
         win.set_host(core.host().into());
+        win.set_version(env!("CARGO_PKG_VERSION").into());
         {
             let c = core.cfg.lock().unwrap();
             win.set_theme_mode(c.theme.clone().into());

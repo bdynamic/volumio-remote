@@ -1,13 +1,18 @@
 # volumio-remote
 
-Small Linux desktop remote for a [Volumio](https://volumio.com) instance on the local network. Written in Rust with Slint.
+Lightweight Linux desktop remote for a [Volumio](https://volumio.com) instance on the local network. Written in Rust with [Slint](https://slint.dev).
 
-- Window with cover art, title/artist/album, play/pause, previous/next, mute and volume slider
-- Dark and bright design, adjustable window opacity
-- Tray icon (grayed out or hidden while Volumio is offline)
-- Registers as a media player (MPRIS2): keyboard media keys and `playerctl` control Volumio
-- Keyboard volume knob controls Volumio volume through a virtual audio sink
-- CLI flags for desktop shortcuts
+## Features
+
+- Now-playing window: cover art, title, artist, album
+- Play/pause, previous/next, mute, volume slider
+- Dark and light theme (auto-follows GTK theme), adjustable window opacity
+- System tray icon (StatusNotifierItem); grayed out or hidden while Volumio is offline
+- MPRIS2 media player: keyboard media keys and `playerctl` control Volumio
+- Hardware/keyboard volume knob controls Volumio volume via a virtual audio sink (PulseAudio / PipeWire-pulse)
+- CLI flags for desktop shortcuts (`--toggle`, `--next`, `--vol-up`, ...)
+- Settings dialog with host, theme, opacity, offline tray behavior and app version
+- Single static-ish binary, no daemon, plain-text config
 
 Target desktop: Cinnamon on X11. Other desktops with StatusNotifierItem and MPRIS support should work.
 
@@ -69,4 +74,16 @@ cargo test
 
 Docs are in [`devdoc/`](devdoc/): [requirements](devdoc/requirements.md), [architecture](devdoc/architecture.md), [build and install](devdoc/build-install.md), [volume knob](devdoc/volume-knob.md).
 
-The original app this is modeled on: [majko96/VolumioApp](https://github.com/majko96/VolumioApp). It has no license; no code was copied.
+## Acknowledgements
+
+Modeled on [majko96/VolumioApp](https://github.com/majko96/VolumioApp). That project has no license; no code was copied.
+
+## License
+
+GPL-3.0-or-later, see [LICENSE](LICENSE). Not affiliated with Volumio.
+
+## Screenshots
+
+| Dark, transparent | Light | Settings |
+|---|---|---|
+| ![Dark theme](screenshots/transparent.png) | ![Light theme](screenshots/white_background.png) | ![Settings](screenshots/settings.png) |
