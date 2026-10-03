@@ -85,6 +85,26 @@ impl Core {
         std::thread::spawn(move || core.refresh());
     }
 
+    /// Persist one config option (`theme`, `offline_tray`) and re-notify listeners (tray status).
+    pub fn set_option(&self, key: &str, val: &str) {
+        let cfg = {
+            let mut c = self.cfg.lock().unwrap();
+            match key {
+                "theme" => c.theme = val.to_string(),
+                "offline_tray" => c.offline_tray = val.to_string(),
+                _ => return,
+            }
+            c.clone()
+        };
+        if let Err(e) = config::save(&cfg) {
+            eprintln!("volumio-remote: save config: {e}");
+        }
+        let cur = self.snapshot();
+        for l in self.listeners.lock().unwrap().iter() {
+            l(&cur);
+        }
+    }
+
     pub fn start_polling(self: &Arc<Self>) {
         let core = self.clone();
         std::thread::spawn(move || loop {

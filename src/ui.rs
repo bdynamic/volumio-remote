@@ -26,6 +26,22 @@ slint::slint! {
         @children
     }
 
+    component Segment inherits Rectangle {
+        in property <string> label;
+        in property <bool> active;
+        in property <brush> on-fill;
+        in property <brush> off-fill;
+        in property <brush> on-text;
+        in property <brush> off-text;
+        callback clicked();
+        height: 32px;
+        border-radius: 8px;
+        horizontal-stretch: 1;
+        background: active ? on-fill : off-fill;
+        Text { text: label; color: active ? on-text : off-text; font-size: 13px; horizontal-alignment: center; vertical-alignment: center; }
+        TouchArea { clicked => { root.clicked(); } }
+    }
+
     component Glyph inherits Path {
         in property <string> shape; // play | pause | prev | next | mute | sound
         width: 20px;
@@ -52,9 +68,13 @@ slint::slint! {
         in property <bool> has-art;
         in-out property <float> volume: 50;
         in property <bool> muted;
-        in property <bool> dark: true;
+        in-out property <bool> dark: true;
         in-out property <string> host;
         in-out property <bool> settings-open;
+        in-out property <string> theme-mode: "auto";
+        in-out property <string> offline-tray: "gray";
+        callback set-theme(string);
+        callback set-offline-tray(string);
         callback toggle();
         callback prev();
         callback next();
@@ -104,7 +124,7 @@ slint::slint! {
                 }
             }
 
-            Rectangle {
+            if !settings-open: Rectangle {
                 background: card;
                 border-radius: 16px;
                 vertical-stretch: 1;
@@ -144,6 +164,50 @@ slint::slint! {
                         font-size: 12px;
                         horizontal-alignment: center;
                         overflow: elide;
+                    }
+                }
+            }
+
+            if settings-open: Rectangle {
+                background: card;
+                border-radius: 16px;
+                vertical-stretch: 1;
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 10px;
+                    alignment: start;
+                    Text { text: "Settings"; color: fg; font-size: 18px; font-weight: 700; }
+                    Text { text: "Volumio host / IP"; color: sub; font-size: 12px; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        host-edit := LineEdit {
+                            text: host;
+                            placeholder-text: "e.g. 192.168.1.10";
+                            horizontal-stretch: 1;
+                        }
+                        Button { text: "Save"; clicked => { save-host(host-edit.text); } }
+                    }
+                    Text { text: "Theme"; color: sub; font-size: 12px; }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        for t in ["auto", "dark", "light"]: Segment {
+                            label: t == "auto" ? "Auto" : t == "dark" ? "Dark" : "Light";
+                            active: theme-mode == t;
+                            on-fill: accent; off-fill: dark ? #2b2f39 : #e6e8ee;
+                            on-text: white; off-text: fg;
+                            clicked => { set-theme(t); }
+                        }
+                    }
+                    Text { text: "Tray icon when Volumio is offline"; color: sub; font-size: 12px; }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        for t in ["gray", "hide"]: Segment {
+                            label: t == "gray" ? "Grayed out" : "Hidden";
+                            active: offline-tray == t;
+                            on-fill: accent; off-fill: dark ? #2b2f39 : #e6e8ee;
+                            on-text: white; off-text: fg;
+                            clicked => { set-offline-tray(t); }
+                        }
                     }
                 }
             }
@@ -200,18 +264,6 @@ slint::slint! {
                 }
             }
 
-            if settings-open: HorizontalLayout {
-                spacing: 8px;
-                host-edit := LineEdit {
-                    text: host;
-                    placeholder-text: "Volumio host or IP, e.g. 192.168.1.10";
-                    horizontal-stretch: 1;
-                }
-                Button {
-                    text: "Save";
-                    clicked => { save-host(host-edit.text); }
-                }
-            }
         }
     }
 }
@@ -284,6 +336,11 @@ impl Ui {
         let win = MainWindow::new().expect("create window");
         win.set_dark(detect_dark(&core.cfg.lock().unwrap().theme));
         win.set_host(core.host().into());
+        {
+            let c = core.cfg.lock().unwrap();
+            win.set_theme_mode(c.theme.clone().into());
+            win.set_offline_tray(c.offline_tray.clone().into());
+        }
         apply(&win, &core.snapshot());
 
         let c = core.clone();
@@ -298,6 +355,21 @@ impl Ui {
         win.on_toggle_mute(move || {
             let muted = c.snapshot().is_some_and(|i| i.mute);
             c.run_cmd(Cmd::Mute(!muted));
+        });
+        let (c, w) = (core.clone(), win.as_weak());
+        win.on_set_theme(move |t| {
+            c.set_option("theme", &t);
+            if let Some(w) = w.upgrade() {
+                w.set_theme_mode(t.clone());
+                w.set_dark(detect_dark(&t));
+            }
+        });
+        let (c, w) = (core.clone(), win.as_weak());
+        win.on_set_offline_tray(move |t| {
+            c.set_option("offline_tray", &t);
+            if let Some(w) = w.upgrade() {
+                w.set_offline_tray(t);
+            }
         });
         let c = core.clone();
         win.on_save_host(move |h| c.set_host(h.as_str()));

@@ -15,7 +15,6 @@ struct VrTray {
     core: Arc<Core>,
     show: ShowFn,
     info: Option<Info>,
-    hide_offline: bool,
 }
 
 const SIZE: i32 = 32;
@@ -56,7 +55,7 @@ impl ksni::Tray for VrTray {
         }
     }
     fn status(&self) -> Status {
-        if self.info.is_none() && self.hide_offline { Status::Passive } else { Status::Active }
+        if self.info.is_none() && self.core.cfg.lock().unwrap().offline_tray == "hide" { Status::Passive } else { Status::Active }
     }
     fn icon_pixmap(&self) -> Vec<Icon> {
         vec![pixmap(self.info.is_some(), self.info.as_ref().is_some_and(|i| i.playing()))]
@@ -118,7 +117,6 @@ pub fn spawn(core: Arc<Core>, show: ShowFn) {
             core: core.clone(),
             show: show.clone(),
             info: core.snapshot(),
-            hide_offline: core.cfg.lock().unwrap().offline_tray == "hide",
         };
         // Tray host may not be up at login: retry.
         let handle: Handle<VrTray> = loop {

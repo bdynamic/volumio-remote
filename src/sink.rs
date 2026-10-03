@@ -67,13 +67,16 @@ pub fn start(core: Arc<Core>) {
         return;
     }
     // Volumio -> sink (keeps knob position in sync; no-op when equal).
-    core.on_change(|s| {
+    // Also run once now: a new sink starts at 100%, so the knob could not go up.
+    fn sync(s: &Option<crate::volumio::Info>) {
         if let Some(i) = s {
             if read_sink().is_some_and(|(v, _)| v != i.volume) {
                 pactl(&["set-sink-volume", SINK, &format!("{}%", i.volume)]);
             }
         }
-    });
+    }
+    core.on_change(sync);
+    sync(&core.snapshot());
     // sink -> Volumio
     std::thread::spawn(move || loop {
         let child = Command::new("pactl").arg("subscribe").stdout(Stdio::piped()).stderr(Stdio::null()).spawn();

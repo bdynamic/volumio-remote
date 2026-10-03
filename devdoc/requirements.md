@@ -41,6 +41,10 @@ Status: see Implementation status below.
 | F-32 | M | Offline: unregister MPRIS service so media keys go to other players; re-register when online | new |
 | F-33 | M | Online again: restore icon, controls, MPRIS, resume polling without restart | new |
 | F-34 | S | Setting: offline tray behavior `gray` (default) / `hide` | new |
+| F-35 | M | Settings panel (⚙) replaces the cover card; contains host, theme, offline tray behavior; never clipped by window size | new; earlier inline row was cut off at the window bottom |
+| F-36 | M | Theme switch in settings: Auto / Dark / Light, persisted (`theme=`), applied live; Auto follows GTK theme name (`gsettings`), default dark | new |
+| F-37 | M | Offline tray behavior switch in settings (Grayed out / Hidden), persisted, applied live | implements F-34 UI |
+| F-38 | M | Volume sink is synced to Volumio volume at start and on every change, so knob starts at the real volume | fix: new sink started at 100% and knob-up did nothing |
 | F-29 | C | Album art in MPRIS `mpris:artUrl` | new |
 
 ## Implementation status
@@ -56,13 +60,15 @@ Tested in container (Xvfb + private D-Bus) against a real Volumio; screenshots c
 | F-14 | open | window geometry not persisted |
 | F-15 | done | mute button; Volumio `mute`/`unmute` unverified on device |
 | F-16 | open | arrow keys not bound |
-| F-21, F-22 | done | Slint UI; dark/light via `gsettings gtk-theme` or `theme=` |
+| F-21, F-22 | done, tested | Slint UI; dark and light designs |
 | F-23..F-27 | done, tested | MPRIS via `zbus`; `playerctl` shows metadata/status/volume |
-| F-28 | done, **fix 1 applied, untested** | `sink.rs`; pactl forced to `LC_ALL=C` (localized `Mute:` line made the handler skip every event); stale poll results dropped after commands; `VR_DEBUG=1` logs sink/Volumio volumes; needs `pactl` (absent in container). Tray item "Use as default output" |
+| F-28 | done; forward path tested with PulseAudio in container, not on Cinnamon | `sink.rs`; pactl forced to `LC_ALL=C` (localized `Mute:` line made the handler skip every event); stale poll results dropped after commands; `VR_DEBUG=1` logs sink/Volumio volumes; needs `pactl` (absent in container). Tray item "Use as default output" |
 | F-31 | done (window, MPRIS tested); tray icon untested | |
 | F-32 | done, tested | MPRIS name released offline, re-registered online |
 | F-33 | done | |
-| F-34 | done, untested | `offline_tray=hide` -> SNI status Passive |
+| F-34, F-37 | done; UI tested, tray effect untested | settings switch, `offline_tray=hide` -> SNI status Passive, applied live |
+| F-35, F-36 | done, tested | screenshots dark + light, config persisted |
+| F-38 | done, tested | real PulseAudio + fake Volumio in container: sink starts at Volumio volume, knob steps and mute reach Volumio |
 | Fallback C | done | `--toggle --next --prev --vol-up --vol-down --mute` |
 | F-18 | done, tested | cover from `getState.albumart` (`/albumart?...` on the Volumio host, or absolute URL); fetched off-thread, decoded with `image` |
 | F-17, F-19, F-20, F-29 | open | |
