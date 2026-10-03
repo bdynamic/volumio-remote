@@ -11,7 +11,7 @@ Lightweight Linux desktop remote for a [Volumio](https://volumio.com) instance o
 - MPRIS2 media player: keyboard media keys and `playerctl` control Volumio
 - Hardware/keyboard volume knob controls Volumio volume via a virtual audio sink (PulseAudio / PipeWire-pulse)
 - CLI flags for desktop shortcuts (`--toggle`, `--next`, `--vol-up`, ...)
-- Settings dialog with host, theme, opacity, offline tray behavior and app version
+- Settings dialog with host, theme, opacity, offline tray behavior, app version, copyright and GitHub link
 - Single static-ish binary, no daemon, plain-text config
 
 Target desktop: Cinnamon on X11. Other desktops with StatusNotifierItem and MPRIS support should work.
