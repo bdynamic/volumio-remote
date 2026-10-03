@@ -54,7 +54,7 @@ Priority: M = must, S = should, C = could. Status values: **done** = implemented
 | F-44 | M | CLI fallback for desktop shortcuts: `--toggle --next --prev --vol-up --vol-down --mute` | done (container) |
 | F-45 | M | Single instance (lock in `$XDG_RUNTIME_DIR`) | done |
 | F-46 | M | `install.sh`: pull, build, install, autostart, restart, remove legacy `volumiox` files | done |
-| F-47 | M | Version 1.1.0 (from `Cargo.toml`) shown in settings dialog | done |
+| F-47 | M | Version 1.2.0 (from `Cargo.toml`) shown in settings dialog | done |
 | F-48 | M | GPL-3.0-or-later license (`LICENSE`) | done |
 | F-49 | S | Cover art corners rounded (about 10.5 px, two thirds of the card radius): image is center-cropped to a square, scaled to 360 px and corners (21 px at 360 px) get an alpha mask in Rust (the Slint software renderer ignores rounded `clip`) | done (untested, no compiler in container) |
 | F-50 | S | Title, artist, album scroll horizontally (pause, scroll, pause) when wider than the window; centered otherwise | done (confirmed on host) |
