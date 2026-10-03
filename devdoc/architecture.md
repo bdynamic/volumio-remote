@@ -15,10 +15,10 @@ Single binary, plain threads, one shared state object.
 
 | File | Role |
 |---|---|
-| `volumio.rs` | blocking REST client (`ureq`, 2 s timeout), `getState` parser, `Cmd` enum, cover download + decode |
+| `volumio.rs` | blocking REST client (`ureq`, 2 s timeout), `getState` parser, `Cmd` enum, cover download, decode, square crop + rounded corners (pixel alpha mask) |
 | `config.rs` | `key=value` config load/save |
 | `core.rs` | `Core`: config, last state (`None` = offline), listeners, polling thread (2 s), `run_cmd` (command thread + refresh) |
-| `ui.rs` | Slint window (inline `slint!`), theme/opacity, settings panel, cover loading |
+| `ui.rs` | Slint window (inline `slint!`), theme/opacity, settings panel (footer: copyright, repo link), scrolling `Marquee` for long texts, cover loading |
 | `tray.rs` | StatusNotifierItem via `ksni`; generated ARGB icon (colored online, gray offline) |
 | `mpris.rs` | MPRIS2 root + player interfaces on the session bus; connection exists only while online |
 | `sink.rs` | virtual null sink `volumio_remote`, `pactl subscribe` watcher, sink volume <-> Volumio volume |
@@ -43,6 +43,7 @@ Single binary, plain threads, one shared state object.
 | Sink synced to Volumio volume at start | a new sink starts at 100 %, knob-up did nothing |
 | Settings is a panel replacing the cover card | inline row was clipped below the window |
 | Slint colors via `rgb()` | `#3ecf6e` / `#2e7dff` lex as numbers with exponent |
+| Cover corners rounded in the pixels, not via Slint `clip` | software renderer ignores rounded clip |
 
 ## Availability
 
