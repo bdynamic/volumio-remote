@@ -27,3 +27,4 @@ This file provides guidance for AI Assistants
 ## Links (`devdoc/`)
 - to be filled by Coding assistant
 - [VolumioX research](devdoc/volumiox-research.md)
+- [Requirements](devdoc/requirements.md)
