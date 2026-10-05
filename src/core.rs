@@ -100,13 +100,14 @@ impl Core {
         std::thread::spawn(move || core.refresh());
     }
 
-    /// Persist one config option (`theme`, `offline_tray`) and re-notify listeners (tray status).
+    /// Persist one config option (`theme`, `offline_tray`, `opacity`, `mpris`) and re-notify listeners (tray status).
     pub fn set_option(&self, key: &str, val: &str) {
         let cfg = {
             let mut c = self.cfg.lock().unwrap();
             match key {
                 "theme" => c.theme = val.to_string(),
                 "offline_tray" => c.offline_tray = val.to_string(),
+                "mpris" => c.mpris = val == "on",
                 "opacity" => c.opacity = val.parse().unwrap_or(100u8).clamp(30, 100),
                 _ => return,
             }

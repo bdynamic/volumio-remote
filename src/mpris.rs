@@ -199,21 +199,20 @@ async fn notify(conn: &Connection) -> zbus::Result<()> {
 }
 
 /// Run the MPRIS service in its own thread with a small tokio runtime.
-/// It is registered only while Volumio is online and dropped when offline.
+/// It is registered only while Volumio is online and the `mpris` option is on.
 pub fn spawn(core: Arc<Core>, show: ShowFn) {
-    // listener (any thread) -> async loop: online/offline flag per state change
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<bool>();
-    core.on_change(move |s| {
-        let _ = tx.send(s.is_some());
+    // listener (any thread) -> async loop: wake-up per state/option change
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+    core.on_change(move |_| {
+        let _ = tx.send(());
     });
-    let initial = core.snapshot().is_some();
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("tokio runtime");
         rt.block_on(async move {
             // `Some` = registered on the bus
             let mut conn: Option<Connection> = None;
-            let mut online = initial;
             loop {
+                let online = core.snapshot().is_some() && core.cfg.lock().unwrap().mpris;
                 if online && conn.is_none() {
                     match connect(&core, &show).await {
                         Ok(c) => conn = Some(c),
@@ -230,9 +229,8 @@ pub fn spawn(core: Arc<Core>, show: ShowFn) {
                     }
                 }
                 // wait for next state change; channel closed = shut down
-                match rx.recv().await {
-                    Some(o) => online = o,
-                    None => return,
+                if rx.recv().await.is_none() {
+                    return;
                 }
             }
         });

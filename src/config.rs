@@ -13,12 +13,14 @@ pub struct Config {
     pub theme: String,
     /// window opacity in percent, 30..=100
     pub opacity: u8,
+    /// register as MPRIS media player (media keys, playerctl)
+    pub mpris: bool,
 }
 
 /// Defaults for first start (no config file yet).
 impl Default for Config {
     fn default() -> Self {
-        Config { host: "volumio.local".into(), offline_tray: "gray".into(), theme: "auto".into(), opacity: 100 }
+        Config { host: "volumio.local".into(), offline_tray: "gray".into(), theme: "auto".into(), opacity: 100, mpris: true }
     }
 }
 
@@ -47,6 +49,7 @@ pub fn parse(text: &str) -> Config {
                     c.opacity = n.clamp(30, 100);
                 }
             }
+            "mpris" if matches!(v, "on" | "off") => c.mpris = v == "on",
             _ => {}
         }
     }
@@ -64,7 +67,7 @@ pub fn save(c: &Config) -> std::io::Result<()> {
     if let Some(d) = p.parent() {
         std::fs::create_dir_all(d)?;
     }
-    std::fs::write(p, format!("host={}\noffline_tray={}\ntheme={}\nopacity={}\n", c.host, c.offline_tray, c.theme, c.opacity))
+    std::fs::write(p, format!("host={}\noffline_tray={}\ntheme={}\nopacity={}\nmpris={}\n", c.host, c.offline_tray, c.theme, c.opacity, if c.mpris { "on" } else { "off" }))
 }
 
 #[cfg(test)]
@@ -78,5 +81,6 @@ mod tests {
         assert_eq!((c.host.as_str(), c.offline_tray.as_str(), c.theme.as_str()), ("192.168.1.10", "hide", "dark"));
         assert_eq!(parse("offline_tray=x").offline_tray, "gray");
         assert_eq!((c.opacity, parse("opacity=70").opacity, parse("opacity=x").opacity), (30, 70, 100));
+        assert!(parse("mpris=x").mpris && !parse("mpris=off").mpris);
     }
 }

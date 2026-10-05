@@ -18,7 +18,7 @@ Priority: M = must, S = should, C = could. Status values: **done** = implemented
 | F-08 | M | Online/offline indicator in the window | done |
 | F-09 | M | Poll Volumio state every 2 s and update UI | done |
 | F-10 | M | Settings: Volumio host/IP (no `http://` needed) | done |
-| F-11 | M | Persist settings in `~/.config/volumio-remote/config` (`host`, `offline_tray`, `theme`, `opacity`) | done |
+| F-11 | M | Persist settings in `~/.config/volumio-remote/config` (`host`, `offline_tray`, `theme`, `opacity`, `mpris`) | done |
 | F-12 | M | Tray icon (StatusNotifierItem) with Play/Pause, Previous, Next, Show window, Use as default output, Quit | done |
 | F-13 | M | Closing the window hides it; tray click shows it | done |
 | F-14 | C | Persist window geometry | open |
@@ -41,6 +41,7 @@ Priority: M = must, S = should, C = could. Status values: **done** = implemented
 | F-31 | M | Offline: tray icon grayed out or hidden, window controls disabled, "Volumio offline" shown | done |
 | F-32 | M | Offline: release the MPRIS name so media keys go to other players; register again when online | done (container) |
 | F-33 | M | Online again: restore everything without restart | done |
+| F-34a | M | Tray menu checkmark "Register as music player" enables/disables MPRIS registration live; persisted as `mpris=on\|off`, default on | done |
 | F-34 | S | Offline tray behavior `gray` (default) or `hide` | done |
 | F-35 | M | Settings panel (gear) replaces the cover card, so it is never clipped | done |
 | F-36 | M | Theme switch Auto / Dark / Light in settings, applied live; Auto follows the GTK theme name, default dark | done |

@@ -41,6 +41,7 @@ The app starts at login. On first start the window opens; enter the Volumio host
 | Show window | click tray icon, or tray menu "Show window" |
 | Close window | X button hides it, app keeps running; "Quit" in the tray menu ends it |
 | Media keys / `playerctl` | work while Volumio is reachable; the player disappears while it is offline |
+| Media keys | tray menu checkmark "Register as music player" toggles MPRIS live |
 | Volume knob | tray menu "Use as default output" once; then the keyboard volume keys set the Volumio volume. Needs `pactl` (PulseAudio or PipeWire-pulse) |
 | Settings | gear icon: host, theme (Auto/Dark/Light), opacity, tray behavior when offline |
 
@@ -63,6 +64,7 @@ host=volumio.local
 offline_tray=gray    # gray | hide
 theme=auto           # auto | dark | light
 opacity=100          # 30..100
+mpris=on             # on | off: register as music player (media keys)
 ```
 
 ## Releases

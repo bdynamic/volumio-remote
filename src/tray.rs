@@ -4,7 +4,7 @@ use crate::core::Core;
 use crate::sink;
 use crate::volumio::{Cmd, Info};
 use ksni::blocking::{Handle, TrayMethods};
-use ksni::menu::{MenuItem, StandardItem};
+use ksni::menu::{CheckmarkItem, MenuItem, StandardItem};
 use ksni::{Icon, Status};
 use std::sync::Arc;
 use std::time::Duration;
@@ -106,6 +106,20 @@ impl ksni::Tray for VrTray {
                 .into(),
             );
         }
+        let mpris = self.core.cfg.lock().unwrap().mpris;
+        m.push(
+            CheckmarkItem {
+                label: "Register as music player (media keys)".into(),
+                checked: mpris,
+                // own thread: set_option notifies listeners, incl. this tray
+                activate: Box::new(move |t: &mut Self| {
+                    let core = t.core.clone();
+                    std::thread::spawn(move || core.set_option("mpris", if mpris { "off" } else { "on" }));
+                }),
+                ..Default::default()
+            }
+            .into(),
+        );
         m.push(MenuItem::Separator);
         m.push(
             StandardItem {
